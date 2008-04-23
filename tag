@@ -1,12 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
-# Automatic tag editor version 0.0.2
-# Copyright (C) 2006, 2007, 2008 Stas Boukarev <stassats@gmail.com>
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3 of the License
+# This software is in the public domain and is
+# provided with absolutely no warranty.
 #
 # Requires PythonMusicBrainz2, mutagen
 
@@ -23,7 +19,7 @@ from mutagen.easyid3 import EasyID3
 import mutagen.id3
 from mutagen.musepack import Musepack
 
-########
+####
 
 class Tag:
     artist = None
@@ -101,8 +97,8 @@ class Tag:
         album = os.path.basename(os.path.dirname(self.file))
         album = album.replace('_', ' ')
 
-        album = re.search('^(?:\d\d? )?(.+?)( \d{4})?$', album)
-        self.album = album.group(1)
+        album = re.search('^(\d\d\w? )?(.+?)( \d{4})?$', album)
+        self.album = album.group(2)
 
     def set_year(self):
         year = os.path.basename(os.path.dirname(self.file))
@@ -118,6 +114,7 @@ class Tag:
         print "Album:", self.album
         print "Year:", self.year
         print "Tracknumber:", self.track
+        print
 
 class not_media_file(exceptions.Exception):
     def __init__(self):
@@ -215,7 +212,7 @@ def read_tags(file_list):
         try:
             tag_list.append(Tag().read_tag(file))
         except not_media_file:
-            print file, "is not media file!"
+            print file, "is not a media file!"
             continue
 
     return tag_list
@@ -361,9 +358,13 @@ def parse_opt():
                       action="store", default=None,
                       help="Set album to ARTIST")
 
-    parser.add_option("-y", "--year", dest="set_year",
+    parser.add_option("-y", "--date", dest="set_year",
                       action="store_true", default=False,
                       help="Set year according to directory name")
+
+    parser.add_option("-Y", "--year", dest="Year",
+                      action="store", default=None,
+                      help="Set year to YEAR")
 
     parser.add_option("-r", "--rename-file", dest="rename",
                       action="store_true", default=False,
@@ -385,7 +386,7 @@ def parse_opt():
                       action="store_true", default=False,
                       help="Guess musicbrainz release")
 
-    parser.add_option("-s", "--shift-tracknumber", dest="shift",
+    parser.add_option("-S", "--shift-tracknumber", dest="shift",
                       action="store", default=0,
                       help="Shift of tracknumber")
 
@@ -400,6 +401,10 @@ def main():
         exit()
 
     tag_list = read_tags(file_list)
+
+    if (len(sys.argv) - len(args) == 1):
+        map(Tag.display_tag, tag_list)
+        exit()
 
     if options.mb_id:
         mb_data = get_mb_data(options.mb_id)
@@ -433,6 +438,9 @@ def main():
 
         if options.Artist:
             tag.artist = unicode(options.Artist, 'utf-8')
+
+        if options.Year:
+            tag.year = unicode(options.Year, 'utf-8')
 
         if not options.mb_id and options.cap_tag:
             tag.capitalize()
