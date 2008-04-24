@@ -61,8 +61,6 @@ class Tag:
             audio['artist'] = self.artist
 
         if self.title and len(self.title) > 0:
-            #foo = re.compile(' \(.+')
-            #title = foo.sub('', title)
             audio['title'] = self.title.replace('`', "'")
 
         if self.album and len(self.album) > 0:
