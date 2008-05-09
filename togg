@@ -1,0 +1,57 @@
+#!/usr/bin/gosh
+;; -*- Mode: Scheme -*-
+
+(use file.util)
+(use srfi-1)
+(use srfi-11)
+(use gauche.process)
+
+(define *media-types*
+  '("flac" "ape" "wv" "wav" "cue"))
+
+(define (media-file? file-name)
+  (member (path-extension file-name) *media-types*))
+
+(define (partition-cue files)
+  (partition
+   (lambda (f) (equal? (path-extension f) "cue"))
+   files))
+
+(define (process-files files output-dir)
+  (let-values (((cue files) (partition-cue files)))
+    (recode files output-dir cue))
+  (tag output-dir))
+
+(define (oggenc-args output-dir)
+  (format #f "cust ext=ogg oggenc -q9 -o ~a/%f -" output-dir))
+
+(define (recode files output-dir cue)
+  ;;   (run-process `(iconv -f cp1251 ,(car cue)) :output "1.cue")
+  ;;   (push! cue "1.cue")
+  (run-process
+   `(shntool ,@(if (and (= (length files) 1) (list? cue))
+                   `(split -t %n_%t -f ,(car cue))
+                   '(conv))
+             -q -o ,(oggenc-args output-dir)
+             ,@files) :wait #t)
+  ;; (sys-remove "1.cue")
+  )
+
+(define (tag directory)
+  (current-directory directory)
+  (if (file-exists? "00_pregap.ogg")
+      (sys-remove "00_pregap.ogg"))
+  (run-process '(tag -gantyr) :wait #t)
+  (run-process '(r.pl) :wait #t))
+
+(define (second list)
+  (if (< (length list) 2)
+      #f
+      (cadr list)))
+
+(define (main args)
+  (process-files
+   (directory-list (current-directory)
+                   :children? #t :filter media-file?)
+   (or (second args) "out"))
+  0)
