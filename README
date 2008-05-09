@@ -1,0 +1,22 @@
+This is collection of various scripts for processing multimedia files.
+
+All code and documentation is in the Public Domain. So you can do with it
+whatever you want.
+
+== tag ==
+Script in Python for processing metadata. 
+
+Dependencies:
+ Mutagen - http://www.sacredchao.net/quodlibet/wiki/Development/Mutagen
+  tested with version 1.13
+
+ PythonMusicBrainz2 - http://musicbrainz.org/doc/PythonMusicBrainz2
+  tested with version 0.5.0
+
+== togg ==
+Script in Scheme for recoding various lossless audiofiles to OGG Vorbis.
+
+Dependencies:
+ Scheme implementation: Gauche - http://practical-scheme.net/gauche/
+
+ Shntool - http://etree.org/shnutils/shntool/

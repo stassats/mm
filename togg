@@ -1,6 +1,11 @@
 #!/usr/bin/gosh
 ;; -*- Mode: Scheme -*-
 
+;; This software is in the public domain and is
+;; provided with absolutely no warranty.
+
+;; Scheme implementation: http://practical-scheme.net/gauche/
+
 (use file.util)
 (use srfi-1)
 (use srfi-11)
