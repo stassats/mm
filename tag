@@ -1,4 +1,4 @@
-# !/usr/bin/python
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
 # This software is in the public domain and is
@@ -387,6 +387,10 @@ def parse_opt():
                       action="store", default=0,
                       help="Shift of tracknumber")
 
+    parser.add_option("", "--print-tracklisting", dest="tracklist",
+                      action="store_true", default=False,
+                      help="Print tracklisting")
+
     return parser.parse_args()
 
 def main():
@@ -399,10 +403,15 @@ def main():
 
     tag_list = read_tags(file_list)
 
+    if options.tracklist:
+        for tag in tag_list:
+            print tag.track + ".", tag.title
+        exit
+
     if (len(sys.argv) - len(args) == 1):
         map(Tag.display_tag, tag_list)
         exit()
-
+        
     if options.mb_id:
         mb_data = get_mb_data(options.mb_id)
 
