@@ -1,9 +1,9 @@
-#!/usr/bin/python
+# !/usr/bin/python
 # -*- coding: utf-8 -*-
-#
+
 # This software is in the public domain and is
 # provided with absolutely no warranty.
-#
+
 # Requires PythonMusicBrainz2, mutagen
 
 import os, sys
@@ -67,7 +67,7 @@ class Tag:
             audio['album'] = self.album
 
         if self.year and len(self.year) > 0:
-           audio['date'] = self.year
+            audio['date'] = self.year
 
         if self.track and self.track > 0:
             audio['tracknumber'] = self.track
@@ -112,7 +112,6 @@ class Tag:
         print "Album:", self.album
         print "Year:", self.year
         print "Tracknumber:", self.track
-        print
 
 class not_media_file(exceptions.Exception):
     def __init__(self):
@@ -155,7 +154,7 @@ def capitalize(str):
     return string.join(str, ' ')
 
 def get_file_ext(file):
-     return os.path.splitext(file)[1][1:]
+    return os.path.splitext(file)[1][1:]
 
 def rename_file(tag):
     if tag.track != '' and int(tag.track) < 10:
@@ -187,7 +186,7 @@ def open_file(file):
         try:
             audio = EasyID3(file)
         except mutagen.id3.error:
-# Dirty and ugly hack
+            # Dirty and ugly hack
             tag = mutagen.id3.ID3()
             tag.add(mutagen.id3.TRCK(encoding=3, text="0"))
             tag.save(file)
@@ -282,9 +281,9 @@ def guess_mb_release(tag_list):
             releases.append(q.getReleaseById(id, inc))
 
             print str(i + 1) + ")", results[i].release.artist.name, '-', \
-            results[i].release.title, \
-            "[" + str(len(releases[i].tracks)), "tracks]" , \
-            "(" + str(results[i].score), "%)"
+                results[i].release.title, \
+                "[" + str(len(releases[i].tracks)), "tracks]" , \
+                "(" + str(results[i].score), "%)"
 
             print " Details:", id + ".html\n"
 

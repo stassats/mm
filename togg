@@ -6,31 +6,31 @@
 
 ;; Scheme implementation: http://practical-scheme.net/gauche/
 
+(use gauche.process)
 (use file.util)
 (use srfi-1)
 (use srfi-11)
-(use gauche.process)
+(use srfi-37)
 
+(define *no-tag* #f)
 (define *media-types*
   '("flac" "ape" "wv" "wav" "cue"))
 
 (define (media-file? file-name)
   (member (path-extension file-name) *media-types*))
 
-(define (partition-cue files)
-  (partition
-   (lambda (f) (equal? (path-extension f) "cue"))
-   files))
-
 (define (process-files files output-dir)
+  (define (partition-cue files)
+    (partition
+     (lambda (f) (equal? (path-extension f) "cue"))
+     files))
   (let-values (((cue files) (partition-cue files)))
     (recode files output-dir cue))
   (tag output-dir))
 
-(define (oggenc-args output-dir)
-  (format #f "cust ext=ogg oggenc -q9 -o ~a/%f -" output-dir))
-
 (define (recode files output-dir cue)
+  (define (oggenc-args output-dir)
+    (format #f "cust ext=ogg oggenc -q9 -o ~a/%f -" output-dir))
   ;;   (run-process `(iconv -f cp1251 ,(car cue)) :output "1.cue")
   ;;   (push! cue "1.cue")
   (run-process
@@ -46,17 +46,30 @@
   (current-directory directory)
   (if (file-exists? "00_pregap.ogg")
       (sys-remove "00_pregap.ogg"))
-  (run-process '(tag -gantyr) :wait #t)
-  (run-process '(r.pl) :wait #t))
+  (unless *no-tag*
+    (run-process '(tag -gantyr) :wait #t)
+    (run-process '(r.pl) :wait #t)))
 
-(define (second list)
-  (if (< (length list) 2)
-      #f
-      (cadr list)))
+(define (parse-options args)
+  (let ((options
+         (list (option '(#\n "no-tag") #f #t
+                       (lambda (option name arg tag dir)
+                         (values #t dir))))))
+    (receive (tag dir)
+        (args-fold (cdr args)
+                   options
+                   (lambda (option name arg . seeds)
+                     (error "Unrecognized option:" name))
+                   (lambda (operand tag dir)
+                     (values tag operand))
+                   #f
+                   "out")
+      (set! *no-tag* tag)
+      dir)))
 
 (define (main args)
   (process-files
    (directory-list (current-directory)
                    :children? #t :filter media-file?)
-   (or (second args) "out"))
+   (parse-options args))
   0)
