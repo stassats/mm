@@ -13,6 +13,7 @@
 (use srfi-37)
 
 (define *no-tag* #f)
+(define *recode* #f)
 (define *media-types*
   '("flac" "ape" "wv" "wav" "cue"))
 
@@ -31,16 +32,18 @@
 (define (recode files output-dir cue)
   (define (oggenc-args output-dir)
     (format #f "cust ext=ogg oggenc -q9 -o ~a/%f -" output-dir))
-  ;;   (run-process `(iconv -f cp1251 ,(car cue)) :output "1.cue")
-  ;;   (push! cue "1.cue")
+
+  (if *recode*
+      (run-process `(iconv -f cp1251 ,(car cue)) :output "/tmp/1.cue")
+      (push! cue "/tmp/1.cue"))
+  (print *recode*)
   (run-process
    `(shntool ,@(if (and (= (length files) 1) (list? cue))
                    `(split -t %n_%t -f ,(car cue))
                    '(conv))
              -q -o ,(oggenc-args output-dir)
              ,@files) :wait #t)
-  ;; (sys-remove "1.cue")
-  )
+  (if *recode* (sys-remove "/tmp/1.cue")))
 
 (define (tag directory)
   (current-directory directory)
@@ -52,18 +55,23 @@
 
 (define (parse-options args)
   (let ((options
-         (list (option '(#\n "no-tag") #f #t
-                       (lambda (option name arg tag dir)
-                         (values #t dir))))))
-    (receive (tag dir)
+         (list (option '(#\n "no-tag") #f #f
+                       (lambda (option name arg tag recode dir)
+                         (values #t recode dir)))
+               (option '(#\r "recode") #f #f
+                       (lambda (option name arg tag recode dir)
+                         (values tag #t dir))))))
+    (receive (tag recode dir)
         (args-fold (cdr args)
                    options
                    (lambda (option name arg . seeds)
                      (error "Unrecognized option:" name))
-                   (lambda (operand tag dir)
-                     (values tag operand))
+                   (lambda (operand tag recode dir)
+                     (values tag recode operand))
+                   #f
                    #f
                    "out")
+      (set! *recode* recode)
       (set! *no-tag* tag)
       dir)))
 
