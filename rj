@@ -16,6 +16,17 @@
 (define *start* #f)
 (define *amount* -1)
 
+(define (main args)
+  (walk-directories
+   (lambda (old)
+     (let ((new (process-file old)))
+       (unless (equal? old new)
+         (if *test*
+             (display (format "Parent directory: ~A. Old: ~A, new: ~A.~%"
+                              (current-directory) old new))
+             (rename-file-or-directory old new)))))
+   (parse-options (cdr args))))
+
 (define (process-file file)
   (define-values (path name _) (split-path file))
   (define (replace what with)
@@ -36,19 +47,25 @@
   (if *reverse*
       (replace "^(\\d{4})_(.+)" "\\2_\\1"))
   (when *start*
-    (match-let* ([(or (_ m) m) (pregexp-match "^(\\d+)\\D" name)]
-                 [(or #f (= string->number num)) m])
-                (if (and m (>= num *start*))
-                    (let* ((num (+ *amount* num))
-                           (str (number->string num))
-                           (dif (- (string-length m)
-                                   (string-length str))))
-                      (replace m (string-append
-                                  (make-string (max dif 0) #\0)
-                                  str))))))
+    (let ((new (change-number name *start* *amount*)))
+      (if new (set! name new))))
   (if (path? path)
       (build-path path name)
       (build-path name)))
+
+(define (change-number string start amount)
+  "Change number from <start> by <amount>: 10_file -> 11_file"
+  (match-let* ([(or (_ m r) m) (pregexp-match "^(\\d+)(\\D.+)$" string)]
+               [(or #f (= string->number num)) m])
+              (if (and m (>= num start))
+                  (let* ((num (+ amount num))
+                         (str (number->string num))
+                         (dif (- (string-length m) ;; Count of padded zeros
+                                 (string-length str))))
+                    (string-append
+                     (make-string (max dif 0) #\0)
+                     str r))
+                  #f)))
 
 (define (walk-directories proc files)
   (for-each
@@ -85,14 +102,3 @@
                       (if (pair? dir)
                           (map simplify-path dir)
                           (directory-list)))))
-
-(define (main args)
-  (walk-directories
-   (lambda (old)
-     (let ((new (process-file old)))
-       (unless (equal? old new)
-         (if *test*
-             (display (format "Parent directory: ~A. Old: ~A, new: ~A.~%"
-                              (current-directory) old new))
-             (rename-file-or-directory old new)))))
-   (parse-options (cdr args))))
