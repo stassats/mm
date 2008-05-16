@@ -36,14 +36,16 @@
   (if *reverse*
       (replace "^(\\d{4})_(.+)" "\\2_\\1"))
   (when *start*
-    (let ((match (pregexp-match "^(\\d+)\\D" name)))
-      (when (and match (>= (string->number (cadr match)) *start*))
-        (let ((number (+ *amount*
-                         (string->number (cadr match)))))
-          (if (and (< number 10) (eq? (string-ref (cadr match) 0) #\0))
-              (set! number (string-append "0" (number->string number)))
-              (set! number (number->string number)))
-          (replace "^\\d+" number)))))
+    (match-let* ([(or (_ m) m) (pregexp-match "^(\\d+)\\D" name)]
+                 [(or #f (= string->number num)) m])
+                (if (and m (>= num *start*))
+                    (let* ((num (+ *amount* num))
+                           (str (number->string num))
+                           (dif (- (string-length m)
+                                   (string-length str))))
+                      (replace m (string-append
+                                  (make-string (max dif 0) #\0)
+                                  str))))))
   (if (path? path)
       (build-path path name)
       (build-path name)))
@@ -59,7 +61,7 @@
    files))
 
 (define (parse-options arg)
-  (command-line "r" arg
+  (command-line "rj" arg
                 (once-each
                  [("-d" "--delete") what
                   "Delete regexp <what> or replcace with <with>"
@@ -67,10 +69,10 @@
                  [("-w" "--with") with
                   "Replace <what> with <with>"
                   (set! *with* with)]
-                 [("-r" "--reverse") 
+                 [("-r" "--reverse")
                   "Reverse year: 1989_dir -> dir_1989"
                   (set! *reverse* #t)]
-                 [("-t" "--test") 
+                 [("-t" "--test")
                   "Do not rename and print new names."
                   (set! *test* #t)]
                  [("-s" "--start") start
@@ -90,7 +92,7 @@
      (let ((new (process-file old)))
        (unless (equal? old new)
          (if *test*
-             (display (format "Parent directory: ~A. Old: ~A, new:c ~A.~%"
+             (display (format "Parent directory: ~A. Old: ~A, new: ~A.~%"
                               (current-directory) old new))
              (rename-file-or-directory old new)))))
    (parse-options (cdr args))))
