@@ -14,6 +14,11 @@
 (define *media-types*
   '(#"flac" #"ape" #"wv" #"wav" #"cue"))
 
+(define (main args)
+  (process-files
+   (find-files media-file?)
+   (parse-options (cdr args))))
+
 (define (media-file? file-name)
   (member (filename-extension file-name)
           *media-types*))
@@ -67,9 +72,4 @@
                           "out"
                           (car output-dir)))))
 
-(define (main args)
-  (process-files
-   (find-files media-file?)
-   (parse-options (cdr args))))
 
-   
