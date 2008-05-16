@@ -1,0 +1,96 @@
+#!/usr/bin/mzscheme -qC
+;; -*- Mode: Scheme -*-
+
+;; This software is in the public domain and is
+;; provided with absolutely no warranty.
+
+(require (lib "cmdline.ss")
+         (lib "file.ss")
+         (lib "pregexp.ss")
+         (lib "match.ss"))
+
+(define *what* #f)
+(define *with* "")
+(define *reverse* #f)
+(define *test* #f)
+(define *start* #f)
+(define *amount* -1)
+
+(define (process-file file)
+  (define-values (path name _) (split-path file))
+  (define (replace what with)
+    (set! name (pregexp-replace* what name with)))
+  (set! name (string-downcase (path->string name)))
+  (for-each (match-lambda ((a b)
+                           (replace a b)))
+            `(("[]()`':;,!|?=\"~[]" "")
+              (" |(\\.*[-_])" "_")
+              ("&" "_and_")
+              ("@" "_at_")
+              ("#" "_n")
+              ("_+" "_")
+              ("\\.+" ".")
+              (,(format "[-_](\\.~a)" (filename-extension name)) "\\1")))
+  (if *what*
+      (replace *what* *with*))
+  (if *reverse*
+      (replace "^(\\d{4})_(.+)" "\\2_\\1"))
+  (when *start*
+    (let ((match (pregexp-match "^(\\d+)\\D" name)))
+      (when (and match (>= (string->number (cadr match)) *start*))
+        (let ((number (+ *amount*
+                         (string->number (cadr match)))))
+          (if (and (< number 10) (eq? (string-ref (cadr match) 0) #\0))
+              (set! number (string-append "0" (number->string number)))
+              (set! number (number->string number)))
+          (replace "^\\d+" number)))))
+  (if (path? path)
+      (build-path path name)
+      (build-path name)))
+
+(define (walk-directories proc files)
+  (for-each
+   (lambda (x)
+     (when (directory-exists? x)
+       (current-directory x)
+       (walk-directories proc (directory-list))
+       (current-directory ".."))
+     (proc x))
+   files))
+
+(define (parse-options arg)
+  (command-line "r" arg
+                (once-each
+                 [("-d" "--delete") what
+                  "Delete regexp <what> or replcace with <with>"
+                  (set! *what* what)]
+                 [("-w" "--with") with
+                  "Replace <what> with <with>"
+                  (set! *with* with)]
+                 [("-r" "--reverse") 
+                  "Reverse year: 1989_dir -> dir_1989"
+                  (set! *reverse* #t)]
+                 [("-t" "--test") 
+                  "Do not rename and print new names."
+                  (set! *test* #t)]
+                 [("-s" "--start") start
+                  "Shift number in filename from <start> by <amount>: 05_file -> 04_file"
+                  (set! *start* (string->number start))]
+                 [("-a" "--amount") amount
+                  "Default -1"
+                  (set! *amount* (string->number amount))])
+                (args dir
+                      (if (pair? dir)
+                          (map simplify-path dir)
+                          (directory-list)))))
+
+(define (main args)
+  (walk-directories
+   (lambda (old)
+     (let ((new (process-file old)))
+       (unless (equal? old new)
+         (if *test*
+             (display (format "Parent directory: ~A. Old: ~A, new:c ~A.~%"
+                              (current-directory) old new))
+             (rename-file-or-directory old new)))))
+   (parse-options (cdr args))))

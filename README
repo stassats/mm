@@ -20,3 +20,9 @@ Dependencies:
  Scheme implementation: MzScheme - http://www.plt-scheme.org/software/mzscheme/
 
  Shntool - http://etree.org/shnutils/shntool/
+
+== rj ==
+Removing junk from filenames.
+
+Dependencies:
+ Scheme implementation: MzScheme.
