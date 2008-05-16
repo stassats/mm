@@ -1,83 +1,75 @@
-#!/usr/bin/gosh
+#!/usr/bin/mzscheme -qC
 ;; -*- Mode: Scheme -*-
 
 ;; This software is in the public domain and is
 ;; provided with absolutely no warranty.
 
-;; Scheme implementation: http://practical-scheme.net/gauche/
-
-(use gauche.process)
-(use file.util)
-(use srfi-1)
-(use srfi-11)
-(use srfi-37)
+(require (lib "cmdline.ss")
+         (lib "process.ss")
+         (lib "file.ss")
+         (lib "1.ss" "srfi"))
 
 (define *no-tag* #f)
 (define *recode* #f)
 (define *media-types*
-  '("flac" "ape" "wv" "wav" "cue"))
+  '(#"flac" #"ape" #"wv" #"wav" #"cue"))
 
 (define (media-file? file-name)
-  (member (path-extension file-name) *media-types*))
+  (member (filename-extension file-name)
+          *media-types*))
 
 (define (process-files files output-dir)
   (define (partition-cue files)
     (partition
-     (lambda (f) (equal? (path-extension f) "cue"))
+     (lambda (f) (equal? (filename-extension f) #"cue"))
      files))
   (let-values (((cue files) (partition-cue files)))
     (recode files output-dir cue))
   (tag output-dir))
 
-(define (recode files output-dir cue)
-  (define (oggenc-args output-dir)
-    (format #f "cust ext=ogg oggenc -q9 -o ~a/%f -" output-dir))
+(define (paths-to-string lis)
+  (let ((str ""))
+    (for-each (lambda (x)
+                (set! str (string-append str " \"" (path->string x) "\"")))
+              lis)
+    str))
 
-  (if *recode*
-      (run-process `(iconv -f cp1251 ,(car cue)) :output "/tmp/1.cue")
-      (push! cue "/tmp/1.cue"))
-  (print *recode*)
-  (run-process
-   `(shntool ,@(if (and (= (length files) 1) (list? cue))
-                   `(split -t %n_%t -f ,(car cue))
-                   '(conv))
-             -q -o ,(oggenc-args output-dir)
-             ,@files) :wait #t)
-  (if *recode* (sys-remove "/tmp/1.cue")))
+(define (recode files output-dir cue)
+  (when *recode*
+    (system (format "iconv -f cp1251 '~a' > /tmp/1.cue") (car cue))
+    (set! cue '("/tmp/1.cue")))
+  (system (format "shntool ~a -q -o \"cust ext=ogg oggenc -q9 -o ~a/%f -\" ~a"
+                  (if (and (= (length files) 1) (pair? cue))
+                      (format "split -t %n_%t -f \"~a\"" (car cue))
+                      "conv")
+                  output-dir
+                  (paths-to-string files)))
+  (if *recode* (delete-file "/tmp/1.cue")))
 
 (define (tag directory)
   (current-directory directory)
   (if (file-exists? "00_pregap.ogg")
-      (sys-remove "00_pregap.ogg"))
+      (delete-file "00_pregap.ogg"))
   (unless *no-tag*
-    (run-process '(tag -gantyr) :wait #t)
-    (run-process '(r.pl) :wait #t)))
+    (system "tag -ganyr && rn")))
 
-(define (parse-options args)
-  (let ((options
-         (list (option '(#\n "no-tag") #f #f
-                       (lambda (option name arg tag recode dir)
-                         (values #t recode dir)))
-               (option '(#\r "recode") #f #f
-                       (lambda (option name arg tag recode dir)
-                         (values tag #t dir))))))
-    (receive (tag recode dir)
-        (args-fold (cdr args)
-                   options
-                   (lambda (option name arg . seeds)
-                     (error "Unrecognized option:" name))
-                   (lambda (operand tag recode dir)
-                     (values tag recode operand))
-                   #f
-                   #f
-                   "out")
-      (set! *recode* recode)
-      (set! *no-tag* tag)
-      dir)))
+(define (parse-options arg)
+  (command-line "togg" arg
+                (once-each
+                 [("-n" "--not-tag")
+                  "Do not edit tags after encoding"
+                  (set! *no-tag* #t)]
+                 [("-r" "--recode")
+                  "Recode cuesheet with iconv"
+                  (set! *recode* #t)])
+                (args output-dir
+                      (if (null? output-dir)
+                          "out"
+                          (car output-dir)))))
 
 (define (main args)
   (process-files
-   (directory-list (current-directory)
-                   :children? #t :filter media-file?)
-   (parse-options args))
-  0)
+   (find-files media-file?)
+   (parse-options (cdr args))))
+
+   

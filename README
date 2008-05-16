@@ -17,6 +17,6 @@ Dependencies:
 Script in Scheme for recoding various lossless audiofiles to OGG Vorbis.
 
 Dependencies:
- Scheme implementation: Gauche - http://practical-scheme.net/gauche/
+ Scheme implementation: MzScheme - http://www.plt-scheme.org/software/mzscheme/
 
  Shntool - http://etree.org/shnutils/shntool/
