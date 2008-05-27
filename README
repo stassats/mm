@@ -11,15 +11,18 @@ Dependencies:
   tested with version 1.13
 
  PythonMusicBrainz2 - http://musicbrainz.org/doc/PythonMusicBrainz2
-  tested with version 0.5.0
+  tested with version 0.5.0, 0.6.0
 
 == togg ==
-Script in Scheme for recoding various lossless audiofiles to OGG Vorbis.
+Script in Scheme for recoding various audiofiles to OGG Vorbis.
 
 Dependencies:
  Scheme implementation: MzScheme - http://www.plt-scheme.org/software/mzscheme/
 
  Shntool - http://etree.org/shnutils/shntool/
+
+ libdca for DTS recoding (optional) -
+   http://www.videolan.org/developers/libdca.html
 
 == rj ==
 Removing junk from filenames.

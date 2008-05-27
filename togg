@@ -11,6 +11,7 @@
 
 (define *no-tag* #f)
 (define *recode* #f)
+(define *dts* #f)
 (define *media-types*
   '(#"flac" #"ape" #"wv" #"wav" #"cue"))
 
@@ -29,7 +30,9 @@
      (lambda (f) (equal? (filename-extension f) #"cue"))
      files))
   (let-values (((cue files) (partition-cue files)))
-    (recode files output-dir cue))
+    (if *dts*
+        (recode-dts files output-dir)
+        (recode files output-dir cue)))
   (tag output-dir))
 
 (define (paths-to-string lis)
@@ -39,17 +42,31 @@
               lis)
     str))
 
+(define (encode-command output-file)
+  (format "oggenc -q9 -Q - -o ~a" output-file))
+
 (define (recode files output-dir cue)
   (when *recode*
     (system (format "iconv -f cp1251 '~a' > /tmp/1.cue") (car cue))
     (set! cue '("/tmp/1.cue")))
-  (system (format "shntool ~a -q -o \"cust ext=ogg oggenc -q9 -o ~a/%f -\" ~a"
+  (system (format "shntool ~a -q -o \"cust ext=ogg ~a/%f -\" ~a"
                   (if (and (= (length files) 1) (pair? cue))
                       (format "split -t %n_%t -f \"~a\"" (car cue))
                       "conv")
-                  output-dir
+                  (encode-command output-dir)
                   (paths-to-string files)))
   (if *recode* (delete-file "/tmp/1.cue")))
+
+(define (recode-dts files output-dir)
+  (for-each
+   (lambda (file)
+     (recode-dts-file file output-dir))
+   files))
+
+(define (recode-dts-file file output-dir)
+  (system (format "dtsdec -o wav \"~a\" 2> /dev/null | ~a" file
+                  (encode-command (format "\"~a/~a\"" output-dir
+                                          (path-replace-suffix file #".ogg"))))))
 
 (define (tag directory)
   (current-directory directory)
@@ -66,7 +83,10 @@
                   (set! *no-tag* #t)]
                  [("-r" "--recode")
                   "Recode cuesheet with iconv"
-                  (set! *recode* #t)])
+                  (set! *recode* #t)]
+                 [("-d" "--dts")
+                  "Recode dts files"
+                  (set! *dts* #t)])
                 (args output-dir
                       (if (null? output-dir)
                           "out"
