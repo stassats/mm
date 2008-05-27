@@ -6,8 +6,7 @@
 
 (require (lib "cmdline.ss")
          (lib "file.ss")
-         (lib "pregexp.ss")
-         (lib "match.ss"))
+         (lib "pregexp.ss"))
 
 (define *what* #f)
 (define *with* "")
@@ -32,8 +31,7 @@
   (define (replace what with)
     (set! name (pregexp-replace* what name with)))
   (set! name (string-downcase (path->string name)))
-  (for-each (match-lambda ((a b)
-                           (replace a b)))
+  (for-each (lambda (x) (replace (car x) (cadr x)))
             `(("[]()`':;,!|?=\"~[]" "")
               (" |(\\.*[-_])" "_")
               ("&" "_and_")
@@ -55,17 +53,18 @@
 
 (define (change-number string start amount)
   "Change number from <start> by <amount>: 10_file -> 11_file"
-  (match-let* ([(or (_ m r) m) (pregexp-match "^(\\d+)(\\D.+)$" string)]
-               [(or #f (= string->number num)) m])
-              (if (and m (>= num start))
-                  (let* ((num (+ amount num))
-                         (str (number->string num))
-                         (dif (- (string-length m) ;; Count of padded zeros
-                                 (string-length str))))
-                    (string-append
-                     (make-string (max dif 0) #\0)
-                     str r))
-                  #f)))
+  (let ((match (pregexp-match "^(\\d+)(\\D.+)$" string)))
+    (if match
+        (let* ((snum (cadr match))
+               (num (string->number snum)))
+          (if (>= num start)
+              (let* ((str (number->string (+ amount num)))
+                     (dif (- (string-length snum) ;; Count of padded zeros
+                             (string-length str))))
+                (string-append
+                 (make-string (max dif 0) #\0)
+                 str (caddr match)))
+              #f)))))
 
 (define (walk-directories proc files)
   (for-each
