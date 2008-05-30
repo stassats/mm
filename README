@@ -4,7 +4,7 @@ All code and documentation is in the Public Domain. So you can do with it
 whatever you want.
 
 == tag ==
-Script in Python for processing metadata. 
+Script in Python for processing metadata.
 
 Dependencies:
  Mutagen - http://www.sacredchao.net/quodlibet/wiki/Development/Mutagen

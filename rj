@@ -33,7 +33,7 @@
   (set! name (string-downcase (path->string name)))
   (for-each (lambda (x) (replace (car x) (cadr x)))
             `(("[]()`':;,!|?=\"~[]" "")
-              (" |(\\.*[-_])" "_")
+              (" |(\\.*[-_ ])" "_")
               ("&" "_and_")
               ("@" "_at_")
               ("#" "_n")
