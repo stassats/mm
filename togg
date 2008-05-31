@@ -46,8 +46,8 @@
   (format "oggenc -q9 -Q - -o ~a" output-file))
 
 (define (recode files output-dir cue)
-  (when *recode*
-    (system (format "iconv -f cp1251 '~a' > /tmp/1.cue") (car cue))
+  (when (and *recode* (pair? cue))
+    (system (format "iconv -f cp1251 '~a' > /tmp/1.cue" (car cue)))
     (set! cue '("/tmp/1.cue")))
   (system (format "shntool ~a -q -o \"cust ext=ogg ~a/%f\" ~a"
                   (if (and (= (length files) 1) (pair? cue))
@@ -91,5 +91,3 @@
                       (if (null? output-dir)
                           "out"
                           (car output-dir)))))
-
-
