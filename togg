@@ -73,7 +73,7 @@
   (if (file-exists? "00_pregap.ogg")
       (delete-file "00_pregap.ogg"))
   (unless *no-tag*
-    (system "tag -ganyr && rj")))
+    (system "tag -gtanyr && rj")))
 
 (define (parse-options arg)
   (command-line "togg" arg
