@@ -14,23 +14,27 @@
 (define *test* #f)
 (define *start* #f)
 (define *amount* -1)
+(define *depth* #f)
 
 (define (main args)
-  (walk-directories
-   (lambda (old)
-     (let ((new (process-file old)))
-       (unless (equal? old new)
-         (if *test*
-             (display (format "Parent directory: ~A. Old: ~A, new: ~A.~%"
-                              (current-directory) old new))
-             (rename-file-or-directory old new)))))
-   (parse-options (cdr args))))
+  (let ((args (parse-options (cdr args))))
+    (walk-directories
+     (lambda (old)
+       (let ((new (process-file old)))
+         (unless (equal? old new)
+           (if *test*
+               (display (format "Parent directory: ~A. Old: ~A, new: ~A.~%"
+                                (current-directory) old new))
+               (rename-file-or-directory old new)))))
+     args
+     *depth*)))
 
 (define (process-file file)
   (define-values (path name _) (split-path file))
   (define (replace what with)
     (set! name (pregexp-replace* what name with)))
   (set! name (string-downcase (path->string name)))
+
   (for-each (lambda (x) (replace (car x) (cadr x)))
             `(("[]()`':;,!|?=\"~[]" "")
               (" |(\\.*[-_ ])" "_")
@@ -44,9 +48,11 @@
       (replace *what* *with*))
   (if *reverse*
       (replace "^(\\d{4})_(.+)" "\\2_\\1"))
+
   (when *start*
     (let ((new (change-number name *start* *amount*)))
       (if new (set! name new))))
+
   (if (path? path)
       (build-path path name)
       (build-path name)))
@@ -64,17 +70,20 @@
                 (string-append
                  (make-string (max dif 0) #\0)
                  str (caddr match)))
-              #f)))))
+              #f))
+        #f)))
 
-(define (walk-directories proc files)
-  (for-each
-   (lambda (x)
-     (when (directory-exists? x)
-       (current-directory x)
-       (walk-directories proc (directory-list))
-       (current-directory ".."))
-     (proc x))
-   files))
+(define (walk-directories proc files depth)
+  (if (or (not depth) (>= depth 0))
+      (for-each
+       (lambda (x)
+         (when (directory-exists? x)
+           (current-directory x)
+           (walk-directories proc (directory-list)
+                             (and depth (- depth 1)))
+           (current-directory ".."))
+         (proc x))
+       files)))
 
 (define (parse-options arg)
   (command-line "rj" arg
@@ -96,7 +105,11 @@
                   (set! *start* (string->number start))]
                  [("-a" "--amount") amount
                   "Default -1"
-                  (set! *amount* (string->number amount))])
+                  (set! *amount* (string->number amount))]
+                 [("-m" "--max-depth") depth
+                  "Maximum level of recursive directory walking."
+                  (set! *depth* (string->number depth))])
+
                 (args dir
                       (if (pair? dir)
                           (map simplify-path dir)
