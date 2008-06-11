@@ -36,14 +36,15 @@
   (set! name (string-downcase (path->string name)))
 
   (for-each (lambda (x) (replace (car x) (cadr x)))
-            `(("[]()`':;,!|?=\"~[]" "")
-              (" |(\\.*[-_ ])" "_")
+            `(("[]()`´':;,!|?=\"~[]" "")
+              (" " "_")
+              ("[-_](\\.[^\\.]+)$" "\\1")
+              ("\\.*[-_ ]\\.*" "_")
               ("&" "_and_")
               ("@" "_at_")
               ("#" "_n")
               ("_+" "_")
-              ("\\.+" ".")
-              (,(format "[-_](\\.~a)" (filename-extension name)) "\\1")))
+              ("\\.+" ".")))
   (if *what*
       (replace *what* *with*))
   (if *reverse*
