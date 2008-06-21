@@ -44,11 +44,12 @@
               ("@" "_at_")
               ("#" "_n")
               ("_+" "_")
-              ("\\.+" ".")))
+              ("\\.+" ".")
+              ("\\.(?=.+\\.)" "_")))
   (when *what*
-      (replace *what* *with*))
+    (replace *what* *with*))
   (when *reverse*
-      (replace "^(\\d{4})_(.+)" "\\2_\\1"))
+    (replace "^(\\d{4})_(.+)" "\\2_\\1"))
 
   (when *start*
     (let ((new (change-number name *start* *amount*)))
@@ -75,16 +76,16 @@
         #f)))
 
 (define (walk-directories proc files depth)
-  (if (or (not depth) (>= depth 0))
-      (for-each
-       (lambda (x)
-         (when (directory-exists? x)
-           (current-directory x)
-           (walk-directories proc (directory-list)
-                             (and depth (- depth 1)))
-           (current-directory ".."))
-         (proc x))
-       files)))
+  (when (or (not depth) (>= depth 0))
+    (for-each
+     (lambda (x)
+       (when (directory-exists? x)
+         (current-directory x)
+         (walk-directories proc (directory-list)
+                           (and depth (- depth 1)))
+         (current-directory ".."))
+       (proc x))
+     files)))
 
 (define (parse-options arg)
   (command-line "rj" arg
