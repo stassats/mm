@@ -252,14 +252,18 @@ def set_mb_data(tag, mb_data):
     (tag.artist, tag.title) = mb_data[int(tag.track)]
 
 def parse_mb_release(release):
-    q = ws.Query()
     result = [release.title]
+    release_artist = release.getArtist().name
 
-    for i in range(len(release.tracks)):
-        id = release.tracks[i].id
-        inc = ws.TrackIncludes(artist=True)
-        track = q.getTrackById(id, inc)
-        result.append([track.artist.name, track.title])
+    for track in release.tracks:
+        artist = track.getArtist()
+
+        if artist:
+            artist = artist.name
+        else:
+            artist = release_artist
+
+        result.append([artist, track.title])
 
     return result
 
@@ -354,6 +358,10 @@ def parse_opt():
                       action="store", default=None,
                       help="Set title to TITLE")
 
+    parser.add_option("-N", "--number", dest="Number",
+                      action="store", default=None,
+                      help="Set track number to NUMBER")
+
     parser.add_option("-p", "--artist", dest="Artist",
                       action="store", default=None,
                       help="Set album to ARTIST")
@@ -414,7 +422,7 @@ def main():
     if (len(sys.argv) - len(args) == 1):
         map(Tag.display_tag, tag_list)
         exit()
-        
+
     if options.mb_id:
         mb_data = get_mb_data(options.mb_id)
 
@@ -450,6 +458,9 @@ def main():
 
         if options.Year:
             tag.year = unicode(options.Year, 'utf-8')
+
+        if options.Number:
+            tag.track = unicode(options.Number, 'utf-8')
 
         if not options.mb_id and options.cap_tag:
             tag.capitalize()
