@@ -22,6 +22,8 @@ from mutagen.mp4 import MP4
 
 ####
 
+q = ws.Query()
+
 class Tag:
     artist = None
     title = None
@@ -236,10 +238,8 @@ def get_tags_artist(tag_list):
     return artist
 
 def get_mb_data(id):
-    q = ws.Query()
-
     try:
-        inc = ws.ReleaseIncludes(tracks=True)
+        inc = ws.ReleaseIncludes(tracks=True, artist=True)
         release = q.getReleaseById(id, inc)
     except ws.WebServiceError, exceptions.e:
         print 'Error:', exceptions.e
@@ -268,7 +268,6 @@ def parse_mb_release(release):
     return result
 
 def guess_mb_release(tag_list):
-    q = ws.Query()
     artist = get_tags_artist(tag_list)
     album = get_tags_album(tag_list)
 
@@ -282,9 +281,11 @@ def guess_mb_release(tag_list):
 
         print "Data from tags:", artist, '-', album, "[" + str(len(tag_list)), "tracks]\n"
         print "Variants from MusicBrainz:"
+
+        inc = ws.ReleaseIncludes(tracks=True, artist=True)
+
         for i in range(res_len):
             id = results[i].release.id
-            inc = ws.ReleaseIncludes(tracks=True)
             releases.append(q.getReleaseById(id, inc))
 
             print str(i + 1) + ")", results[i].release.artist.name, '-', \
