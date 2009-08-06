@@ -35,10 +35,15 @@
         (recode files output-dir cue)))
   (tag output-dir))
 
+(define (quote-for-shell string)
+  (regexp-replace* "'" string "\\'"))
+
 (define (paths-to-string lis)
   (let ((str ""))
     (for-each (lambda (x)
-                (set! str (string-append str " '" (path->string x) "'")))
+                (set! str (string-append str " '"
+                                         (quote-for-shell (path->string x))
+                                         "'")))
               lis)
     str))
 
