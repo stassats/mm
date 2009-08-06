@@ -4,6 +4,8 @@
 ;; This software is in the public domain and is
 ;; provided with absolutely no warranty.
 
+;;; BUG 04_would_you_....mp3 -> 04_would_you_mp3
+
 (require (lib "cmdline.ss")
          (lib "file.ss")
          (lib "pregexp.ss"))
@@ -23,8 +25,7 @@
        (let ((new (process-file old)))
          (unless (equal? old new)
            (if *test*
-               (display (format "Parent directory: ~A. Old: ~A, new: ~A.~%"
-                                (current-directory) old new))
+               (display (format "Old: ~A, new: ~A.~%" old new))
                (rename-file-or-directory old new)))))
      args
      *depth*)))
@@ -36,7 +37,7 @@
   (set! name (string-downcase (path->string name)))
 
   (for-each (lambda (x) (replace (car x) (cadr x)))
-            `(("[]()`´':;,!|?=\"~[]" "")
+            '(("[]()`´':;,!|?=\"~*[]" "")
               (" " "_")
               ("[ \\-_]+(\\.[^\\.]+)$" "\\1")
               ("\\.*[-_ ]\\.*" "_")

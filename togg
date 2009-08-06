@@ -38,7 +38,7 @@
 (define (paths-to-string lis)
   (let ((str ""))
     (for-each (lambda (x)
-                (set! str (string-append str " \"" (path->string x) "\"")))
+                (set! str (string-append str " '" (path->string x) "'")))
               lis)
     str))
 
@@ -49,9 +49,9 @@
   (when (and *recode* (pair? cue))
     (system (format "iconv -f cp1251 '~a' > /tmp/1.cue" (car cue)))
     (set! cue '("/tmp/1.cue")))
-  (system (format "shntool ~a -q -o \"cust ext=ogg ~a/%f\" ~a"
+  (system (format "shntool ~a -q -o 'cust ext=ogg ~a/%f' ~a"
                   (if (and (= (length files) 1) (pair? cue))
-                      (format "split -t %n_%t -f \"~a\"" (car cue))
+                      (format "split -t %n_%t -f '~a'" (car cue))
                       "conv")
                   (encode-command output-dir)
                   (paths-to-string files)))
@@ -70,8 +70,8 @@
 
 (define (tag directory)
   (current-directory directory)
-  (if (file-exists? "00_pregap.ogg")
-      (delete-file "00_pregap.ogg"))
+  (when (file-exists? "00_pregap.ogg")
+    (delete-file "00_pregap.ogg"))
   (unless *no-tag*
     (system "tag -gtanyr && rj")))
 
