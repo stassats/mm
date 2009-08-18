@@ -36,13 +36,13 @@
   (tag output-dir))
 
 (define (quote-for-shell string)
-  (regexp-replace* "'" string "\\'"))
+  (regexp-replace* "'" (path->string string) "'\\\\''"))
 
 (define (paths-to-string lis)
   (let ((str ""))
     (for-each (lambda (x)
                 (set! str (string-append str " '"
-                                         (quote-for-shell (path->string x))
+                                         (quote-for-shell x)
                                          "'")))
               lis)
     str))
@@ -56,7 +56,8 @@
     (set! cue '("/tmp/1.cue")))
   (system (format "shntool ~a -q -o 'cust ext=ogg ~a/%f' ~a"
                   (if (and (= (length files) 1) (pair? cue))
-                      (format "split -t %n_%t -f '~a'" (car cue))
+                      (format "split -t %n_%t -f '~a'"
+                              (quote-for-shell (car cue)))
                       "conv")
                   (encode-command output-dir)
                   (paths-to-string files)))
