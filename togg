@@ -1,99 +1,71 @@
-#!/usr/bin/mzscheme -qC
-;; -*- Mode: Scheme -*-
+#!/usr/bin/gosh
+;;; -*- Mode: Scheme -*-
 
-;; This software is in the public domain and is
-;; provided with absolutely no warranty.
+;;; This software is in the public domain and is
+;;; provided with absolutely no warranty.
 
-(require (lib "cmdline.ss")
-         (lib "process.ss")
-         (lib "file.ss")
-         (lib "1.ss" "srfi"))
+(use gauche.process)
+(use gauche.parseopt)
+(use file.util)
+(use srfi-1)
+(use srfi-11)
 
 (define *no-tag* #f)
 (define *recode* #f)
-(define *dts* #f)
+(define *quiet* #f)
+
 (define *media-types*
-  '(#"flac" #"ape" #"wv" #"wav" #"cue"))
+  '("flac" "ape" "wv" "wav" "cue"))
 
 (define (main args)
   (process-files
-   (find-files media-file?)
-   (parse-options (cdr args))))
+   (directory-list (current-directory)
+                   :children? #t :filter media-file?)
+   (options (cdr args))))
 
 (define (media-file? file-name)
-  (member (filename-extension file-name)
-          *media-types*))
+  (member (path-extension file-name) *media-types*))
 
 (define (process-files files output-dir)
   (define (partition-cue files)
     (partition
-     (lambda (f) (equal? (filename-extension f) #"cue"))
+     (lambda (f) (equal? (path-extension f) "cue"))
      files))
   (let-values (((cue files) (partition-cue files)))
-    (if *dts*
-        (recode-dts files output-dir)
-        (recode files output-dir cue)))
+    (recode files output-dir cue))
   (tag output-dir))
 
-(define (quote-for-shell string)
-  (regexp-replace* "'" (path->string string) "'\\\\''"))
-
-(define (paths-to-string lis)
-  (let ((str ""))
-    (for-each (lambda (x)
-                (set! str (string-append str " '"
-                                         (quote-for-shell x)
-                                         "'")))
-              lis)
-    str))
-
-(define (encode-command output-file)
-  (format "oggenc -q9 -Q - -o ~a" output-file))
-
 (define (recode files output-dir cue)
-  (when (and *recode* (pair? cue))
-    (system (format "iconv -f cp1251 '~a' > /tmp/1.cue" (car cue)))
-    (set! cue '("/tmp/1.cue")))
-  (system (format "shntool ~a -q -O always -o 'cust ext=ogg ~a/%f' ~a"
-                  (if (and (= (length files) 1) (pair? cue))
-                      (format "split -t %n_%t -f '~a'"
-                              (quote-for-shell (car cue)))
-                      "conv")
-                  (encode-command output-dir)
-                  (paths-to-string files)))
-  (if *recode* (delete-file "/tmp/1.cue")))
-
-(define (recode-dts files output-dir)
-  (for-each
-   (lambda (file)
-     (recode-dts-file file output-dir))
-   files))
-
-(define (recode-dts-file file output-dir)
-  (system (format "dtsdec -o wav \"~a\" 2> /dev/null | ~a" file
-                  (encode-command (format "\"~a/~a\"" output-dir
-                                          (path-replace-suffix file #".ogg"))))))
+  (when *recode*
+    (run-process `(iconv -f cp1251 ,(car cue)) :output "/tmp/1.cue")
+    (push! cue "/tmp/1.cue"))
+  (let ((encoder
+         (format #f "cust ext=ogg oggenc -q9 -o ~a/%f -" output-dir)))
+    (run-process
+     `(shntool  ,@(if (and (= (length files) 1) (pair? cue))
+                      `(split -t %n_%t -f ,(car cue))
+                      '(conv))
+                ,@(if *quiet* '(-q) ())
+                -o ,encoder
+                -O always
+                ,@files)
+     :wait #t))
+  (when *recode* (sys-remove "/tmp/1.cue")))
 
 (define (tag directory)
   (current-directory directory)
   (when (file-exists? "00_pregap.ogg")
-    (delete-file "00_pregap.ogg"))
+    (sys-remove "00_pregap.ogg"))
   (unless *no-tag*
-    (system "tag -gtanyr && rj")))
+    (run-process '(tag -gtanyr) :wait #t)
+    (run-process '(rj) :wait #t)))
 
-(define (parse-options arg)
-  (command-line "togg" arg
-                (once-each
-                 [("-n" "--not-tag")
-                  "Do not edit tags after encoding"
-                  (set! *no-tag* #t)]
-                 [("-r" "--recode")
-                  "Recode cuesheet with iconv"
-                  (set! *recode* #t)]
-                 [("-d" "--dts")
-                  "Recode dts files"
-                  (set! *dts* #t)])
-                (args output-dir
-                      (if (null? output-dir)
-                          "out"
-                          (car output-dir)))))
+(define (options args)
+  (let-args args
+            ((#f "n|no-tag" => (cut set! *no-tag* #t))
+             (#f "r|recode" => (cut set! *recode* #t))
+             (#f "q|quiet"  => (cut set! *quiet* #t))
+             . rest)
+    (unless (= (length rest) 1)
+      (error "Should be exactly one argument."))
+    (car rest)))
