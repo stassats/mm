@@ -21,10 +21,9 @@
     (walk-directories
      (lambda (old)
        (let ((new (process-file old)))
-         (unless (equal? old new)
-           (if *test*
-               (display (format "Old: ~A, new: ~A.~%" old new))
-               (move-file old new)))))
+         (cond ((equal? old (simplify-path new)))
+               (*test* (format "Old: ~A, new: ~A.~%" old new))
+               (else (move-file old new)))))
      args
      *depth*)))
 
