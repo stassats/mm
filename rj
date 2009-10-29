@@ -1,14 +1,12 @@
-#!/usr/bin/mzscheme -qC
-;; -*- Mode: Scheme -*-
+#!/usr/bin/gosh
+;;; -*- Mode: Scheme -*-
 
-;; This software is in the public domain and is
-;; provided with absolutely no warranty.
+;;; This software is in the public domain and is
+;;; provided with absolutely no warranty.
 
-;;; BUG 04_would_you_....mp3 -> 04_would_you_mp3
-
-(require (lib "cmdline.ss")
-         (lib "file.ss")
-         (lib "pregexp.ss"))
+(use gauche.parseopt)
+(use file.util)
+(use srfi-13)
 
 (define *what* #f)
 (define *with* "")
@@ -19,34 +17,34 @@
 (define *depth* #f)
 
 (define (main args)
-  (let ((args (parse-options (cdr args))))
+  (let ((args (options (cdr args))))
     (walk-directories
      (lambda (old)
        (let ((new (process-file old)))
          (unless (equal? old new)
            (if *test*
                (display (format "Old: ~A, new: ~A.~%" old new))
-               (rename-file-or-directory old new)))))
+               (move-file old new)))))
      args
      *depth*)))
 
 (define (process-file file)
-  (define-values (path name _) (split-path file))
+  (define name (string-downcase (path-sans-extension (sys-basename file))))
+  (define path (sys-dirname file))
+  (define extension (path-extension file))
   (define (replace what with)
-    (set! name (pregexp-replace* what name with)))
-  (set! name (string-downcase (path->string name)))
+    (set! name (regexp-replace-all what name with)))
 
   (for-each (lambda (x) (replace (car x) (cadr x)))
-            '(("[]()`´':;,!|?=\"~*[]" "")
+            '(("[\\]()`´':;,!|?=\"~*\\[]" "")
               (" " "_")
-              ("[ \\-_]+(\\.[^\\.]+)$" "\\1")
               ("\\.*[-_ ]\\.*" "_")
               ("&+" "_and_")
               ("@" "_at_")
               ("#" "_n")
               ("_+" "_")
-              ("\\.+" ".")
-              ("\\.(?=.+\\.)" "_")))
+              ("_$" "")
+              ("^_" "")))
   (when *what*
     (replace *what* *with*))
   (when *reverse*
@@ -56,23 +54,21 @@
     (let ((new (change-number name *start* *amount*)))
       (when new (set! name new))))
 
-  (if (path? path)
-      (build-path path name)
-      (build-path name)))
+  (path-swap-extension (build-path path name) extension))
 
 (define (change-number string start amount)
   "Change number from <start> by <amount>: 10_file -> 11_file"
-  (let ((match (pregexp-match "^(\\d+)(\\D.+)$" string)))
-    (if match
-        (let* ((snum (cadr match))
-               (num (string->number snum)))
+  (rxmatch-let (rxmatch #/^(\d+)(\D.+)$/ string)
+               (#f snum rest)
+    (if snum
+        (let ((num (string->number snum)))
           (if (>= num start)
               (let* ((str (number->string (+ amount num)))
                      (dif (- (string-length snum) ;; Count of padded zeros
                              (string-length str))))
                 (string-append
                  (make-string (max dif 0) #\0)
-                 str (caddr match)))
+                 str rest))
               #f))
         #f)))
 
@@ -80,40 +76,30 @@
   (when (or (not depth) (>= depth 0))
     (for-each
      (lambda (x)
-       (when (directory-exists? x)
+       (when (file-is-directory? x)
          (current-directory x)
-         (walk-directories proc (directory-list)
+         (walk-directories proc
+                           (directory-list (current-directory) :children? #t)
                            (and depth (- depth 1)))
          (current-directory ".."))
        (proc x))
      files)))
 
-(define (parse-options arg)
-  (command-line "rj" arg
-                (once-each
-                 [("-d" "--delete") what
-                  "Delete regexp <what> or replcace with <with>"
-                  (set! *what* what)]
-                 [("-w" "--with") with
-                  "Replace <what> with <with>"
-                  (set! *with* with)]
-                 [("-r" "--reverse")
-                  "Reverse year: 1989_dir -> dir_1989"
-                  (set! *reverse* #t)]
-                 [("-t" "--test")
-                  "Do not rename and print new names."
-                  (set! *test* #t)]
-                 [("-s" "--start") start
-                  "Shift number in filename from <start> by <amount>: 05_file -> 04_file"
-                  (set! *start* (string->number start))]
-                 [("-a" "--amount") amount
-                  "Default -1"
-                  (set! *amount* (string->number amount))]
-                 [("-m" "--max-depth") depth
-                  "Maximum level of recursive directory walking."
-                  (set! *depth* (string->number depth))])
+(define (help)
+  (print "delete=s with=s reverse start=n amount=n max-depth=n test")
+  (exit))
 
-                (args dir
-                      (if (pair? dir)
-                          (map simplify-path dir)
-                          (directory-list)))))
+(define (options args)
+  (let-args args
+     ((#f "d|delete=s"    => (cut set! *what* <>))
+      (#f "w|with=s"      => (cut set! *with* <>))
+      (#f "r|reverse"     => (cut set! *reverse* #t))
+      (#f "s|start=n"     => (cut set! *start* <>))
+      (#f "a|amount=n" -1 => (cut set! *amount* <>))
+      (#f "m|max-depth=n" => (cut set! *depth* <>))
+      (#f "t|test"        => (cut set! *test* #t))
+      (#f "h|help"        => help)
+      . rest)
+    (if (pair? rest)
+        (map simplify-path rest)
+        (directory-list (current-directory) :children? #t))))
