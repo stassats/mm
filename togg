@@ -40,7 +40,7 @@
     (run-process `(iconv -f cp1251 ,(car cue)) :output "/tmp/1.cue")
     (push! cue "/tmp/1.cue"))
   (let ((encoder
-         (format #f "cust ext=ogg oggenc -q9 -o ~a/%f -" output-dir)))
+         (format #f "cust ext=ogg oggenc -q8 -o ~a/%f -" output-dir)))
     (run-process
      `(shntool  ,@(if (and (= (length files) 1) (pair? cue))
                       `(split -t %n_%t -f ,(car cue))
