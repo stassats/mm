@@ -22,7 +22,7 @@
      (lambda (old)
        (let ((new (process-file old)))
          (cond ((equal? old (simplify-path new)))
-               (*test* (format "Old: ~A, new: ~A.~%" old new))
+               (*test* (display (format "Old: ~A, new: ~A.~%" old new)))
                (else (move-file old new)))))
      args
      *depth*)))
