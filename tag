@@ -172,6 +172,10 @@ def rename_file(tag):
     new_name += (tag.track + '_' + tit).replace("/", "_")
     new_name += os.path.splitext(tag.file)[1]
 
+    if os.path.exists(new_name):
+        print 'Error: path', new_name, 'exists'
+        sys.exit(1)
+
     os.rename (tag.file, new_name)
 
     tag.file = new_name
