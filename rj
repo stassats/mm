@@ -23,7 +23,10 @@
        (let ((new (process-file old)))
          (cond ((equal? old (simplify-path new)))
                (*test* (display (format "Old: ~A, new: ~A.~%" old new)))
-               (else (move-file old new)))))
+               (else
+                (if (file-exists? new)
+                    (warn (format "File ~a exists." new))
+                    (move-file old new))))))
      args
      *depth*)))
 

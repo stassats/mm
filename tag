@@ -198,7 +198,7 @@ def open_file(file):
         try:
             audio = EasyID3(file)
         except mutagen.id3.error:
-            # Dirty and ugly hack
+            # If the tag is absent it needs to be explicitly added
             tag = mutagen.id3.ID3()
             tag.add(mutagen.id3.TRCK(encoding=3, text="0"))
             tag.save(file)
