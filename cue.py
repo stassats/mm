@@ -104,4 +104,3 @@ def parse_cue(file):
     with open(file) as file:
         return fill_objects(parser.parse(file.read()))
 
-parse_cue("/home/stas/test.cue")    
