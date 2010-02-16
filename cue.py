@@ -3,7 +3,10 @@ import ply.lex as lex
 tokens = ('STRING', 'NUMBER', 'REM',
           'TAG', 'TRACK', 'FILE_MODE', 'FILE', 'MODE', 'INDEX')
 
-t_STRING=r'(?<=").+(?=")'
+def t_STRING(t):
+    r'"(.+)"'
+    t.value = t.lexer.lexmatch.group(2)
+    return t
 
 def t_NUMBER(t):
     r'\d+'
@@ -21,9 +24,9 @@ t_TAG=r'(TITLE)|(PERFORMER)|(SONGWRITER)|(COMPOSER)|(ARRANGER)|(GENRE)'
 t_MODE=r'(AUDIO)'
 t_FILE_MODE=r'(WAVE)'
 
-t_ignore_REM  = r'^REM.*'
+t_ignore_REM = r'REM.*'
 
-t_ignore  = ' \t"'
+t_ignore  = ' \t'
 def t_newline(t):
     r'((\r\n)|\n)+'
     t.lexer.lineno += len(t.value)
@@ -101,4 +104,4 @@ def parse_cue(file):
     with open(file) as file:
         return fill_objects(parser.parse(file.read()))
 
-#parse_cue("/home/stas/test.cue")    
+parse_cue("/home/stas/test.cue")    
