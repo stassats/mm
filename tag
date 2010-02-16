@@ -81,6 +81,10 @@ class Tag:
         self.title = capitalize(self.title)
         self.album = capitalize(self.album)
 
+    def lower_articles(self):
+        self.title = lower_articles(self.title)
+        self.album = lower_articles(self.album)
+
     def set_title(self):
         title = unicode(os.path.splitext(os.path.basename(self.file))[0])
         title = title.replace('_', ' ')
@@ -140,21 +144,37 @@ def cap(i):
     if i[0] == '(':
         return '(' + i[1:].capitalize()
 
-    if i in art:
-        return i
-
     return i.capitalize()
+
+def articlify(string):
+    def parenthesed(string):
+        return string[0] == '(' or string[-1] == ')'
+
+    if string.lower() in art and not parenthesed(string):
+        return string.lower()
+    else:
+        return string
+
+def lower_articles(str):
+    if str == None or len(str) <= 0:
+        return
+
+    words = str.split()
+    if len(words) <= 1:
+        return str
+
+    words = [words[0]] + map(articlify, words[1:-1]) + [words[-1]]
+    return string.join(words, ' ')
 
 def capitalize(str):
     if str == None or len(str) <= 0:
         return
 
-    str = str.capitalize().split()
-    str[-1] = str[-1].capitalize()
+    words = [word.capitalize() for word in str.split()]
 
-    str = map(cap, str)
+    words = map(cap, words)
 
-    return string.join(str, ' ')
+    return lower_articles(string.join(words, ' '))
 
 def get_file_ext(file):
     return os.path.splitext(file)[1][1:]
@@ -404,6 +424,10 @@ def parse_opt():
 
     parser.add_option("-c", "--capitalize", dest="cap_tag",
                       action="store_true", default=False,
+                      help="Make articles lowercase")
+
+    parser.add_option("-C", "--capitalize-all", dest="cap_all",
+                      action="store_true", default=False,
                       help="Capitalize tag")
 
     parser.add_option("-d", "--delete", dest="rem_tag",
@@ -497,6 +521,9 @@ def main():
             tag.track = unicode(options.Number, 'utf-8')
 
         if not options.mb_id and options.cap_tag:
+            tag.lower_articles()
+
+        if not options.mb_id and options.cap_all:
             tag.capitalize()
 
     if options.mb_guess:
