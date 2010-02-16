@@ -321,6 +321,22 @@ def guess_mb_release(tag_list):
             for tag in tag_list:
                 set_mb_data(tag, mb_data)
 
+def find_track(tracks, number):
+    for track in tracks:
+        if track.number == number:
+            return track
+    
+def set_from_cue(tag, cue_data):
+    track = find_track(cue_data.tracks, int(tag.track))
+    if track == None:
+        print "error, no track with such number in a cue file", tag.track
+
+    tag.album = cue_data.title
+    tag.title = track.title
+    tag.artist = track.performer or cue_data.performer
+
+    return track
+
 def get_file_list(args):
     #Walk current directory if no argumners was specified
     if len(args) <= 0:
@@ -409,6 +425,9 @@ def parse_opt():
     parser.add_option("", "--print-tracklisting", dest="tracklist",
                       action="store_true", default=False,
                       help="Print tracklisting")
+    parser.add_option("", "--cue", dest="cue_file",
+                      action="store", default=None,
+                      help="Set tags according to a CUE file")
 
     return parser.parse_args()
 
@@ -434,6 +453,10 @@ def main():
     if options.mb_id:
         mb_data = get_mb_data(options.mb_id)
 
+    if options.cue_file:
+        import cue
+        cue_data = cue.parse_cue(options.cue_file)
+
     for tag in tag_list:
         if options.set_year:
             tag.set_year()
@@ -450,6 +473,9 @@ def main():
         if options.mb_id:
             set_mb_data(tag, mb_data)
 
+        if options.cue_file:
+            set_from_cue(tag, cue_data)
+            
         if options.set_tit:
             tag.set_title()
 
