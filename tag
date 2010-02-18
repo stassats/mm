@@ -86,7 +86,8 @@ class Tag:
         self.album = lower_articles(self.album)
 
     def set_title(self):
-        title = unicode(os.path.splitext(os.path.basename(self.file))[0])
+        title = unicode(os.path.splitext(os.path.basename(self.file))[0],
+                        'utf-8', 'ignore')
         title = title.replace('_', ' ')
 
         self.title = re.search('^(?:\d\d? )?(.+)', title).group(1)
@@ -358,7 +359,7 @@ def set_from_cue(tag, cue_data):
     return track
 
 def get_file_list(args):
-    #Walk current directory if no argumners was specified
+    # Walk current directory if no argumnets was specified
     if len(args) <= 0:
         args = [os.getcwd()]
 
@@ -370,12 +371,11 @@ def get_file_list(args):
         if os.path.isdir(path):
             for root, dirs, files in os.walk(path):
                 for name in files:
-                    file_list.append(unicode(os.path.join(root, name),
-                                             "utf-8"))
+                    file_list.append(os.path.join(root, name))
         else:
-            file_list.append(unicode(path, "utf-8"))
+            file_list.append(path)
 
-    #Remove duplicates
+    # Remove duplicates
     return [ x for i, x in enumerate(file_list) if i == file_list.index(x) ]
 
 def parse_opt():
