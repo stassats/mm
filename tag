@@ -346,7 +346,7 @@ def find_track(tracks, number):
     for track in tracks:
         if track.number == number:
             return track
-    
+
 def set_from_cue(tag, cue_data):
     track = find_track(cue_data.tracks, int(tag.track))
     if track == None:
@@ -499,7 +499,7 @@ def main():
 
         if options.cue_file:
             set_from_cue(tag, cue_data)
-            
+
         if options.set_tit:
             tag.set_title()
 

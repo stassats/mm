@@ -1,4 +1,7 @@
-import os,re
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+import os, re
 import cue
 
 junk = [("[\\]()`´':;,!|?=\"~*\\[]", ""),
@@ -50,4 +53,26 @@ def guess_from_cue(cue_file):
     va = is_various_artists(album)
 
     return ("Various Artists" if va else album.performer,
-            (album.title))
+            album.title, album.date)
+
+base_dir = os.path.expanduser("~/music/")
+
+def make_filename(tags):
+    file_name = base_dir
+
+    (artist, album, year) = tags
+    artist = remove_junk(artist)
+    album = remove_junk(album)
+
+    if artist == 'various_artists':
+        file_name += '_/'
+    else:
+        file_name += artist[0] + '/' + artist + '/'
+
+    file_name += album
+
+    if year:
+        file_name += '_' + str(year)
+
+    return file_name
+

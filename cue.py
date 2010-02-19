@@ -35,7 +35,7 @@ def t_REM(t):
     if first_word in rem_exceptions:
         t.type = first_word
         t.value = first_word
-        t.lexer.lexpos -= len(rest) 
+        t.lexer.lexpos -= len(rest)
         return t
     else:
         pass
@@ -87,7 +87,7 @@ def p_track_1(p):
 def p_track_2(p):
     '''track : track track'''
     p[0] = p[1] + p[2]
-    
+
 def p_error(p):
     print "Syntax error in:", p
 
@@ -123,4 +123,3 @@ def fill_objects(parsed_cue):
 def parse_cue(file):
     with open(file) as file:
         return fill_objects(parser.parse(file.read()))
-
