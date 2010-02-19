@@ -1,6 +1,6 @@
 import ply.lex as lex
 
-tokens = ('STRING', 'NUMBER', 'REM',
+tokens = ('STRING', 'NUMBER', 'REM', 'DATE',
           'TAG', 'TRACK', 'FILE_MODE', 'FILE', 'MODE', 'INDEX')
 
 def t_STRING(t):
@@ -24,9 +24,24 @@ t_TAG=r'(TITLE)|(PERFORMER)|(SONGWRITER)|(COMPOSER)|(ARRANGER)|(GENRE)'
 t_MODE=r'(AUDIO)'
 t_FILE_MODE=r'(WAVE)'
 
-t_ignore_REM = r'REM.*'
+rem_exceptions = ['DATE']
+
+def t_REM(t):
+    r'REM\s*(.*)'
+
+    remaining = t.lexer.lexmatch.group(5)
+    [first_word, rest] = remaining.split(None,1)
+
+    if first_word in rem_exceptions:
+        t.type = first_word
+        t.value = first_word
+        t.lexer.lexpos -= len(rest) 
+        return t
+    else:
+        pass
 
 t_ignore  = ' \t'
+
 def t_newline(t):
     r'((\r\n)|\n)+'
     t.lexer.lineno += len(t.value)
@@ -48,7 +63,11 @@ def p_expression_cue(p):
 def p_tag_index(p):
     '''tag : INDEX NUMBER NUMBER ':' NUMBER ':' NUMBER'''
     p[0] = [(p[1], (p[2], p[3], p[5], p[7]))]
-    
+
+def p_tag_date(p):
+    'tag : DATE NUMBER'
+    p[0] = [('date', p[2])]
+
 def p_tag_1(p):
     '''tag : TAG STRING'''
     p[0] = [(p[1].lower(), p[2])]
@@ -78,6 +97,7 @@ class Album:
     performer = None
     title = None
     tracks = []
+    date = None
 
 class Track:
     number = 0
