@@ -29,7 +29,7 @@ def unjunk_filename(filename):
 media_files = [".mp3", ".flac", ".ape", ".wv", ".wav"]
 
 def find_files(directory, types):
-    return [name for name in os.listdir(directory)
+    return [os.path.join(directory, name) for name in os.listdir(directory)
             if os.path.splitext(name)[1].lower() in types]
 
 def find_media_files(directory):
@@ -38,7 +38,16 @@ def find_media_files(directory):
 def find_cue_files(directory):
     return find_files(directory, [".cue"])
 
-def guess_path_from_cue(cue):
-    album = cue.parse_cue(cue)
-    
-    
+def is_various_artists(cue_album):
+    for track in cue_album.tracks:
+        if track and track.performer != cue_album.performer:
+            return True
+
+    return False
+
+def guess_from_cue(cue_file):
+    album = cue.parse_cue(cue_file)
+    va = is_various_artists(album)
+
+    return ("Various Artists" if va else album.performer,
+            (album.title))
