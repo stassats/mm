@@ -32,9 +32,10 @@ class Tag:
     track = None
     file = None
 
-    def __init__(self):
-        self.data = []
-
+    def __init__(self, file = None):
+        if file:
+           self.read_tag(file)
+        
     def read_tag(self, file):
         self.file = file
         audio = open_file(file)
@@ -240,7 +241,7 @@ def read_tags(file_list):
 
     for file in file_list:
         try:
-            tag_list.append(Tag().read_tag(file))
+            tag_list.append(Tag(file))
         except not_media_file:
             print file, "is not a media file!"
             continue
@@ -534,4 +535,5 @@ def main():
             rename_file(tag)
         tag.write_tag()
 
-main()
+if __name__ == "__main__":
+    main()        
