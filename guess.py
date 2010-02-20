@@ -3,6 +3,7 @@
 
 import os, re
 import cue
+import tag
 
 junk = [("[\\]()`´':;,!|?=\"~*\\[]", ""),
         ("[-_.\\\\ ]+", "_"),
@@ -17,13 +18,13 @@ junk_re = [(re.compile(rx), sub) for (rx, sub) in junk]
 
 def remove_junk(string):
     string = string.lower()
-    for (rx, sub) in junk_re:
+    for rx, sub in junk_re:
         string = rx.sub(sub, string)
     return string
 
 def unjunk_filename(filename):
-    (directory, filename) = os.path.split(filename)
-    (name, ext) = os.path.splitext(filename)
+    directory, filename = os.path.split(filename)
+    name, ext = os.path.splitext(filename)
     name = remove_junk(name)
     return os.path.join(directory, name + ext)
 
@@ -55,12 +56,32 @@ def guess_from_cue(cue_file):
     return ("Various Artists" if va else album.performer,
             album.title, album.date)
 
+def guess_from_tags(files):
+    first = tag.Tag(files[0])
+
+    year = first.year
+    artist = first.artist
+    album = first.album
+
+    for file in files[1:]:
+        tags = tag.Tag(file)
+        if year != tags.year:
+            year = None
+        if album != tags.album:
+            album = None
+        if artist and artist != tags.artist:
+            artist = "Various Artists"
+
+    return (artist, album, year)
+
+##
+
 base_dir = os.path.expanduser("~/music/")
 
 def make_filename(tags):
     file_name = base_dir
 
-    (artist, album, year) = tags
+    artist, album, year = tags
     artist = remove_junk(artist)
     album = remove_junk(album)
 
@@ -75,4 +96,3 @@ def make_filename(tags):
         file_name += '_' + str(year)
 
     return file_name
-
