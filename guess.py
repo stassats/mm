@@ -1,9 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import os, re
-import cue
-import tag
+import os, re, readline
+import cue, tag
 
 junk = [("[\\]()`´':;,!|?=\"~*\\[]", ""),
         ("[-_.\\\\ ]+", "_"),
@@ -51,6 +50,9 @@ def is_various_artists(cue_album):
 
 def guess_from_cue(cue_file):
     album = cue.parse_cue(cue_file)
+    if album == None:
+        return None
+
     va = is_various_artists(album)
 
     return ("Various Artists" if va else album.performer,
@@ -96,3 +98,32 @@ def make_filename(tags):
         file_name += '_' + str(year)
 
     return file_name
+
+def decode_files(directory, files):
+    print "shntool conv -o \"cust ext=ogg oggenc -q8 -o %s %%f - -O always\" %s" % \
+    (directory, str.join(' ', files))
+
+def decode_files_using_cue(directory, cue, files):
+    print "shntool split -t %%n_%%t -f %s -o \"cust ext=ogg oggenc -q8 -o %s %%f - -O always\" %s" % \
+    (cue, directory, str.join(' ', files))
+
+def read_line(prompt, initial_text):
+    def startup_hook():
+        readline.insert_text(initial_text)
+
+    readline.set_startup_hook(startup_hook)
+    return raw_input(prompt)
+    
+def recode(directory):
+    media = find_media_files(directory)
+    cue = find_cue_files(directory)
+
+    media_output = guess_from_tags(media)
+    print media_output
+    cue = map(guess_from_cue, cue)
+    
+    if len(media) > len(cue):
+        decode_files(read_line("Output directory: ", make_filename(media_output)), media_files)
+
+
+recode(".")

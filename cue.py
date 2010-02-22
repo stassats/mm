@@ -20,7 +20,8 @@ t_FILE=r'FILE'
 
 t_INDEX=r'INDEX'
 
-t_TAG=r'(TITLE)|(PERFORMER)|(SONGWRITER)|(COMPOSER)|(ARRANGER)|(GENRE)'
+t_TAG=r'(TITLE)|(PERFORMER)|(SONGWRITER)|(COMPOSER)| \
+(ARRANGER)|(GENRE)|(CATALOG)|(PREGAP)'
 t_MODE=r'(AUDIO)'
 t_FILE_MODE=r'(WAVE)'
 
@@ -47,7 +48,7 @@ def t_newline(t):
     t.lexer.lineno += len(t.value)
 
 def t_error(t):
-    print "Illegal character '%s'" % t.value[0]
+    #print "Illegal character '%s'" % t.value[0]
     t.lexer.skip(1)
 
 lexer = lex.lex()
@@ -69,7 +70,8 @@ def p_tag_date(p):
     p[0] = [('date', p[2])]
 
 def p_tag_1(p):
-    '''tag : TAG STRING'''
+    '''tag : TAG STRING
+           | TAG NUMBER'''
     p[0] = [(p[1].lower(), p[2])]
 
 def p_tag_2(p):
@@ -112,12 +114,15 @@ def fill_object(object, slots):
     return object
 
 def fill_objects(parsed_cue):
+    if parsed_cue == None:
+        return None
+
     album = Album()
     fill_object(album, parsed_cue[0])
     for track in parsed_cue[1][1]:
         album.tracks.append(fill_object(Track(), track))
     # for track in album.tracks:
-    #     print track.number
+    #     print track.title
     return album
 
 def parse_cue(file):
