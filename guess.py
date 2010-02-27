@@ -125,8 +125,9 @@ def make_filename(tags):
     return file_name
 
 def decode_files(directory, files):
-    os.system("shntool conv -o \"cust ext=ogg oggenc -q8 -o %s/%%f -\" -O always %s" % \
-                  (directory, str.join(' ', files)))
+    os.system("shntool conv -o 'cust ext=ogg oggenc -q8 -o %s/%%f -' -O always %s" % \
+                  (directory, str.join(' ',
+                                       map(pipes.quote, files))))
 
 def decode_files_using_cue(directory, cue, files):
     
@@ -135,8 +136,32 @@ def decode_files_using_cue(directory, cue, files):
                   (pipes.quote(cue),
                    directory, str.join(' ',
                                        map(pipes.quote, files)))
-    print command
     os.system(command)
+
+def filename_completer(text, state):
+    directory, rest = os.path.split(text)
+    if not os.path.exists(directory):
+        return
+
+    files = os.listdir(directory)
+    possible_files = [file for file in files
+                      if re.match(rest, file)]
+    
+    if len(possible_files) <= state:
+        return
+
+    result = os.path.join(directory, possible_files[state])
+    if len(possible_files) == 1:
+        if os.path.isdir(result):
+            result += "/"
+        else:
+            result += " "
+
+    return result
+
+readline.set_completer_delims(" ")
+readline.parse_and_bind("tab: complete")
+readline.set_completer(filename_completer)
 
 def read_line(prompt, initial_text):
     def startup_hook():
