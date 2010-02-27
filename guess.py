@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import os, re, readline
+import os, re, readline, pipes
 import cue, tag
 
 junk = [("[\\]()`´':;,!|?=\"~*\\[]", ""),
@@ -68,7 +68,7 @@ def group_files(files):
 
 def is_various_artists(cue_album):
     for track in cue_album.tracks:
-        if track and track.performer != cue_album.performer:
+        if track and track.performer and track.performer != cue_album.performer:
             return True
 
     return False
@@ -125,12 +125,18 @@ def make_filename(tags):
     return file_name
 
 def decode_files(directory, files):
-    print "shntool conv -o \"cust ext=ogg oggenc -q8 -o %s %%f - -O always\" %s" % \
-    (directory, str.join(' ', files))
+    os.system("shntool conv -o \"cust ext=ogg oggenc -q8 -o %s/%%f -\" -O always %s" % \
+                  (directory, str.join(' ', files)))
 
 def decode_files_using_cue(directory, cue, files):
-    print "shntool split -t %%n_%%t -f %s -o \"cust ext=ogg oggenc -q8 -o %s %%f - -O always\" %s" % \
-    (cue, directory, str.join(' ', files))
+    
+    command = "shntool split -t %%n_%%t -f %s -o \
+'cust ext=ogg oggenc -q8 -o %s/%%f -' -O always %s" % \
+                  (pipes.quote(cue),
+                   directory, str.join(' ',
+                                       map(pipes.quote, files)))
+    print command
+    os.system(command)
 
 def read_line(prompt, initial_text):
     def startup_hook():
@@ -138,17 +144,26 @@ def read_line(prompt, initial_text):
 
     readline.set_startup_hook(startup_hook)
     return raw_input(prompt)
-    
+
+def recode_release(release):
+    cues, files = release
+
+    if len(cues) == len(files) and len(cues) == 1:
+        destination = make_filename(guess_from_cue(cues[0]))
+        destination = read_line("Destination: ", destination)
+        decode_files_using_cue(destination, cues[0], files)
+    elif len(cues) == 0:
+        destination = make_filename(guess_from_tags(files))
+        destination = read_line("Destination: ", destination)
+        decode_files(destination, files)
+    else:
+        destination = make_filename(guess_from_cue(cues[0]))
+        destination = read_line("Destination: ", destination)
+        decode_files(destination, files)
+    os.system("tag -ganyr " + destination)
+
 def recode(directory):
-    media = find_media_files(directory)
-    cue = find_cue_files(directory)
-
-    media_output = guess_from_tags(media)
-    print media_output
-    cue = map(guess_from_cue, cue)
-    
-    if len(media) > len(cue):
-        decode_files(read_line("Output directory: ", make_filename(media_output)), media_files)
-
+    releases = get_dirs(directory)
+    map(recode_release, releases)
 
 recode(".")
