@@ -1,6 +1,7 @@
 import ply.lex as lex
+import os
 
-tokens = ('STRING', 'NUMBER', 'REM', 'DATE',
+tokens = ('STRING', 'NUMBER', 'REM', 'DATE', 'FLAG',
           'TAG', 'TRACK', 'FILE_MODE', 'FILE', 'MODE', 'INDEX')
 
 def t_STRING(t):
@@ -21,9 +22,10 @@ t_FILE=r'FILE'
 t_INDEX=r'INDEX'
 
 t_TAG=r'(TITLE)|(PERFORMER)|(SONGWRITER)|(COMPOSER)| \
-(ARRANGER)|(GENRE)|(CATALOG)|(PREGAP)'
+(ARRANGER)|(GENRE)|(CATALOG)|(PREGAP)|(FLAGS)'
 t_MODE=r'(AUDIO)'
 t_FILE_MODE=r'(WAVE)'
+t_FLAG=r'(DCP)'
 
 rem_exceptions = ['DATE']
 
@@ -71,7 +73,8 @@ def p_tag_date(p):
 
 def p_tag_1(p):
     '''tag : TAG STRING
-           | TAG NUMBER'''
+           | TAG NUMBER
+           | TAG FLAG'''
     p[0] = [(p[1].lower(), p[2])]
 
 def p_tag_2(p):
@@ -93,7 +96,7 @@ def p_track_2(p):
 def p_error(p):
     print "Syntax error in:", p
 
-parser = yacc.yacc()
+parser = yacc.yacc(debug=0, outputdir=os.path.dirname(__file__))
 
 class Album:
     performer = None
