@@ -29,17 +29,42 @@ def unjunk_filename(filename):
 
 ##
 
-media_files = [".mp3", ".flac", ".ape", ".wv", ".wav"]
+media_files = [".mp3", ".flac", ".ape", ".wv", ".wav", ".cue"]
 
-def find_files(directory, types):
-    return [os.path.join(directory, name) for name in os.listdir(directory)
-            if os.path.splitext(name)[1].lower() in types]
+def extension(filename):
+    return os.path.splitext(filename)[1].lower()
 
-def find_media_files(directory):
-    return find_files(directory, media_files)
+def sans_extension(filename):
+    return os.path.splitext(filename)[0]
 
-def find_cue_files(directory):
-    return find_files(directory, [".cue"])
+def get_dirs(path):
+    result = []
+    for root, dirs, files in os.walk(path):
+        media = [os.path.join(root, file) for file in files
+                 if extension(file) in media_files]
+        if media:
+            result.append(media)
+
+    return map(group_files, result)
+
+def group_multiple_cues(cues, non_cues):
+    groups = []
+    for cue in cues:
+        counterpart = [file for file in non_cues
+                       if sans_extension(cue) == sans_extension(file)]
+        assert len(counterpart) == 1
+        groups.append(([cue], counterpart))
+
+    return groups
+
+def group_files(files):
+    cues = filter(lambda file: extension(file) == ".cue", files)
+    non_cues = filter(lambda file: extension(file) != ".cue", files)
+
+    if len(cues) == len(non_cues) and len(cues) > 1:
+        return group_multiple_cues(cues, non_cues)
+
+    return (cues, non_cues)
 
 def is_various_artists(cue_album):
     for track in cue_album.tracks:
