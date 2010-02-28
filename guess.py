@@ -124,19 +124,36 @@ def make_filename(tags):
 
     return file_name
 
+def remove_directory(files):
+    return (os.path.dirname(files[0]),
+            map(os.path.basename, files))
+
+def run_program(command, directory):
+    original_cwd = os.getcwd()
+    if directory:
+        os.chdir(directory)
+    try:
+        return os.system(command)
+    finally:
+        os.chdir(original_cwd)
+        
 def decode_files(directory, files):
-    os.system("shntool conv -o 'cust ext=ogg oggenc -q8 -o %s/%%f -' -O always %s" % \
-                  (directory, str.join(' ',
-                                       map(pipes.quote, files))))
+    dir, files = remove_directory(files)
+
+    run_program("shntool conv -o 'cust ext=ogg oggenc -q8 -o %s/%%f -' -O always %s" % \
+                         (directory, str.join(' ', map(pipes.quote, files))),
+                dir)
 
 def decode_files_using_cue(directory, cue, files):
-    
-    command = "shntool split -t %%n_%%t -f %s -o \
+    dir, files = remove_directory(files)
+    cue = os.path.basename(cue)
+
+    run_program("shntool split -t %%n_%%t -f %s -o \
 'cust ext=ogg oggenc -q8 -o %s/%%f -' -O always %s" % \
-                  (pipes.quote(cue),
-                   directory, str.join(' ',
-                                       map(pipes.quote, files)))
-    os.system(command)
+                         (pipes.quote(cue), directory,
+                          str.join(' ', map(pipes.quote, files))),
+                dir)
+
 
 def filename_completer(text, state):
     directory, rest = os.path.split(text)
