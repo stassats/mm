@@ -35,7 +35,7 @@ class Tag:
     def __init__(self, file = None):
         if file:
            self.read_tag(file)
-        
+
     def read_tag(self, file):
         self.file = file
         audio = open_file(file)
@@ -105,7 +105,7 @@ class Tag:
         album = os.path.basename(os.path.dirname(self.file))
 
         album = album.replace('_', ' ')
-        
+
         album = re.search('^(\d\d\w? )?(.+?)( \d{4})?$', album)
 
         self.album = album.group(2)
@@ -211,11 +211,11 @@ def get_file_ext(file):
 def rename_files(tags):
     for tag in tags:
         rename_file(tag, len(tags) > 9)
-    
+
 def rename_file(tag, zero=True):
     if not tag.title:
         return
-    
+
     if tag.number:
         if zero and tag.number < 10:
             track = '0' + str(tag.number)
@@ -225,7 +225,7 @@ def rename_file(tag, zero=True):
     else:
         track = ''
         print "WARNING: no track number on file " + tag.file
-    
+
     new_name = os.path.dirname(tag.file) + '/'
     new_name += remove_junk(track + tag.title)
     new_name += os.path.splitext(tag.file)[1]
@@ -360,23 +360,19 @@ def guess_mb_release(tag_list):
             print " Details:", id + ".html\n"
 
         while True:
-            if res_len == 1:
-                rng = "[1]"
-            else:
-                rng = "[1.." + str(res_len) +"]"
-
-            a = raw_input("Enter number of release to use " + rng + ": ")
-            if a.isdigit() and int(a) in range(res_len + 1):
-                a = int(a)
+            a = raw_input("Number of the release or a release id (zero for none): ")
+            if not a.isdigit():
+                mb_data = get_mb_data(a)
                 break
+            elif int(a) < res_len and int(a) > -1:
+                a = int(a)
+
+                mb_data = parse_mb_release(releases[a - 1])
             else:
-                print "Number must be", rng
+                print "Must be a positive number less than %d" % res_len
 
-        if a > 0:
-            mb_data = parse_mb_release(releases[a - 1])
-
-            for tag in tag_list:
-                set_mb_data(tag, mb_data)
+        for tag in tag_list:
+            set_mb_data(tag, mb_data)
 
 def find_track(tracks, number):
     for track in tracks:
@@ -567,9 +563,9 @@ def main():
 
     if options.rename:
         rename_files(tag_list)
-        
+
     for tag in tag_list:
         tag.write_tag()
 
 if __name__ == "__main__":
-    main()        
+    main()
