@@ -59,7 +59,16 @@ def get_dirs(path):
         if media:
             result.append(media)
 
-    return map(group_files, result)
+    grouped_files = []
+    for files in result:
+        files = group_files(files)
+
+        if isinstance(files, list):
+            grouped_files.extend(files)
+        else:
+            grouped_files.append(files)
+
+    return grouped_files
 
 def group_multiple_cues(cues, non_cues):
     groups = []
