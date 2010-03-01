@@ -83,7 +83,7 @@ def p_tag_2(p):
 
 def p_file_1(p):
     '''file : FILE STRING FILE_MODE track'''
-    p[0] = [[(p[1], p[2])] + p[4]]
+    p[0] = p[4]
 
 def p_file_2(p):
     '''file : file file'''
@@ -91,8 +91,8 @@ def p_file_2(p):
 
 def p_track_1(p):
     '''track : TRACK NUMBER MODE tag'''
-    
-    p[0] = [('number', p[2])] + p[4]
+
+    p[0] = [[('number', p[2])] + p[4]]
 
 def p_track_2(p):
     '''track : track track'''
@@ -136,3 +136,4 @@ def fill_objects(parsed_cue):
 def parse_cue(file):
     with open(file) as file:
         return fill_objects(parser.parse(file.read()))
+

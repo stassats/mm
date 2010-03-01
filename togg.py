@@ -200,10 +200,10 @@ def shntool(destination, files, cue=None):
 def set_tags(directory, tags, remove=None):
 
     def track_number(file_name, common=""):
-        match = re.search('^' + common + '(\d_)?(\d\d?)',
+        match = re.search('^' + common + '(\d\d?)',
                           tag.remove_junk(os.path.basename(file_name)))
         if match:
-            return int(match.group(2))
+            return int(match.group(1))
 
     file_list = [os.path.join(directory, file)
                  for file in os.listdir(directory)]
@@ -212,7 +212,7 @@ def set_tags(directory, tags, remove=None):
         return
 
     common = os.path.basename(os.path.commonprefix(file_list))
-    
+
     for file in file_list:
         new_tag = tag.find_track(tags, track_number(file, common))
 
@@ -252,6 +252,9 @@ def recode_release(release):
         destination = sys.argv[1]
     else:
         destination = read_line("Destination: ", make_filename(guess))
+
+    if not destination:
+        return
 
     if all(extension(file) == ".mp3" for file in files):
         if not os.path.exists(destination):
