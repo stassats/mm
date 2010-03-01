@@ -50,7 +50,7 @@ def t_newline(t):
     t.lexer.lineno += len(t.value)
 
 def t_error(t):
-    #print "Illegal character '%s'" % t.value[0]
+    print "Illegal character '%s'" % t.value[0]
     t.lexer.skip(1)
 
 lexer = lex.lex()
@@ -83,11 +83,16 @@ def p_tag_2(p):
 
 def p_file_1(p):
     '''file : FILE STRING FILE_MODE track'''
-    p[0] = (p[2], p[4])
+    p[0] = [[(p[1], p[2])] + p[4]]
+
+def p_file_2(p):
+    '''file : file file'''
+    p[0] = p[1] + p[2]
 
 def p_track_1(p):
     '''track : TRACK NUMBER MODE tag'''
-    p[0] = [[('number', p[2])] + p[4]]
+    
+    p[0] = [('number', p[2])] + p[4]
 
 def p_track_2(p):
     '''track : track track'''
@@ -110,19 +115,19 @@ class Track:
     performer = None
 
 def fill_object(object, slots):
-    for (attr, value) in slots:
+    for attr, value in slots:
         if hasattr(object, attr):
             setattr(object, attr, value)
 
     return object
 
 def fill_objects(parsed_cue):
-    if parsed_cue == None:
-        return None
+    if not parsed_cue:
+        return
 
     album = Album()
     fill_object(album, parsed_cue[0])
-    for track in parsed_cue[1][1]:
+    for track in parsed_cue[1]:
         album.tracks.append(fill_object(Track(), track))
     # for track in album.tracks:
     #     print track.title
