@@ -129,6 +129,10 @@ def guess_from_tags(files):
         if artist and artist != tags.artist:
             artist = "Various Artists"
 
+    for track in tracks:
+        if not track.number:
+            track.set_number()
+
     return (artist, album, year, tracks)
 
 ##
