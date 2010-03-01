@@ -185,8 +185,9 @@ def shntool(destination, files, cue=None):
                 ,dir)
 
 def set_tags(directory, tags, remove=None):
-    def track_number(file_name):
-        match = re.search('^(\d_)?(\d\d?)',
+
+    def track_number(file_name, common=""):
+        match = re.search('^' + common + '(\d_)?(\d\d?)',
                           tag.remove_junk(os.path.basename(file_name)))
         if match:
             return int(match.group(2))
@@ -197,12 +198,14 @@ def set_tags(directory, tags, remove=None):
     if not file_list:
         return
 
+    common = os.path.basename(os.path.commonprefix(file_list))
+    
     for file in file_list:
-        new_tag = tag.find_track(tags, track_number(file))
+        new_tag = tag.find_track(tags, track_number(file, common))
 
         if not new_tag:
             print "WARNING: couldn't find track with number " + \
-                track_number(file)
+                str(track_number(file, common))
         else:
             new_tag.file = file
 
