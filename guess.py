@@ -180,7 +180,7 @@ def recode_release(release):
     shntool(destination, files, cues and cues[0])
 
     os.system("tag -ganyr " + destination)
-    os.system("mpc update " + re.sub(music_dir, destination))
+    os.system("mpc update " + re.sub(music_dir, "", destination))
 
 def recode(directory):
     releases = get_dirs(directory)
