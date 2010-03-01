@@ -364,10 +364,11 @@ def guess_mb_release(tag_list):
             if not a.isdigit():
                 mb_data = get_mb_data(a)
                 break
-            elif int(a) < res_len and int(a) > -1:
+            elif int(a) <= res_len and int(a) > -1:
                 a = int(a)
 
                 mb_data = parse_mb_release(releases[a - 1])
+                break
             else:
                 print "Must be a positive number less than %d" % res_len
 
