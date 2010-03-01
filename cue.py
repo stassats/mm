@@ -106,8 +106,11 @@ parser = yacc.yacc(debug=0, outputdir=os.path.dirname(__file__))
 class Album:
     performer = None
     title = None
-    tracks = []
+    tracks = None
     date = None
+
+    def __init__(self):
+        self.tracks = []
 
 class Track:
     number = 0
@@ -136,4 +139,3 @@ def fill_objects(parsed_cue):
 def parse_cue(file):
     with open(file) as file:
         return fill_objects(parser.parse(file.read()))
-

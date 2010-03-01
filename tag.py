@@ -366,7 +366,8 @@ def guess_mb_release(tag_list):
                 break
             elif int(a) <= res_len and int(a) > -1:
                 a = int(a)
-
+                if a == 0: return
+                
                 mb_data = parse_mb_release(releases[a - 1])
                 break
             else:
