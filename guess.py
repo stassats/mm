@@ -91,8 +91,19 @@ def guess_from_cue(cue_file):
 
     va = is_various_artists(album)
 
+    tracks = []
+    for cue_track in album.tracks:
+        track = tag.Tag()
+        tracks.append(track)
+        
+        track.artist = cue_track.performer or album.performer
+        track.album = album.title
+        track.title = cue_track.title
+        track.year = album.date
+        track.number = cue_track.number
+
     return ("Various Artists" if va else album.performer,
-            album.title, album.date)
+            album.title, album.date, tracks)
 
 def guess_from_tags(files):
     first = tag.Tag(files[0])
@@ -101,8 +112,13 @@ def guess_from_tags(files):
     artist = first.artist
     album = first.album
 
+    tracks = []
+    tracks.append(first)
+
     for file in files[1:]:
         tags = tag.Tag(file)
+        tracks.append(tags)
+
         if year != tags.year:
             year = None
         if album != tags.album:
@@ -110,7 +126,7 @@ def guess_from_tags(files):
         if artist and artist != tags.artist:
             artist = "Various Artists"
 
-    return (artist, album, year)
+    return (artist, album, year, tracks)
 
 ##
 
@@ -119,7 +135,7 @@ music_dir = os.path.expanduser("~/music/")
 def make_filename(tags):
     file_name = music_dir
 
-    artist, album, year = tags
+    artist, album, year, _ = tags
 
     if not artist or not album:
         return music_dir
@@ -164,7 +180,34 @@ def shntool(destination, files, cue=None):
     run_program("shntool " + mode + " -o " + encoder +
                 " -O always " + str.join(' ', map(pipes.quote, files))
                 ,dir)
-        
+
+def set_tags(directory, tags, remove=None):
+    def track_number(file_name):
+        match = re.search('^\d\d?', os.path.basename(file_name))
+        if match:
+            return int(match.group())
+    
+    file_list = [os.path.join(directory, file)
+                 for file in os.listdir(directory)]
+
+    if not file_list:
+        return
+
+    for file in file_list:
+        new_tag = tag.find_track(tags, track_number(file))
+
+        if not new_tag:
+            print "WARNING: couldn't find track with number " + \
+                track_number(file)
+        else:
+            new_tag.file = file
+            if remove:
+                tag.remove_tag(file)
+
+    tag.guess_mb_release(tags)
+    tag.rename_files(tags)
+    map(tag.Tag.write_tag, tags)
+    
 def recode_release(release):
     cues, files = release
 
@@ -179,7 +222,7 @@ def recode_release(release):
     destination = read_line("Destination: ", make_filename(guess))
     shntool(destination, files, cues and cues[0])
 
-    os.system("tag -ganyr " + destination)
+    set_tags(destination, guess[3])
     os.system("mpc update " + re.sub(music_dir, "", destination))
 
 def recode(directory):

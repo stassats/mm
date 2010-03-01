@@ -53,7 +53,7 @@ class Tag:
             self.year = audio['date'][0]
 
         if audio.has_key('tracknumber'):
-            self.track = tr.sub('', audio['tracknumber'][0])
+            self.number = tr.sub('', audio['tracknumber'][0])
 
         audio.save()
         return self
@@ -61,21 +61,21 @@ class Tag:
     def write_tag(self):
         audio = open_file(self.file)
 
-        if self.artist and len(self.artist) > 0:
+        if self.artist:
             audio['artist'] = self.artist
 
-        if self.title and len(self.title) > 0:
+        if self.title:
             audio['title'] = self.title.replace('`', "'")
 
-        if self.album and len(self.album) > 0:
+        if self.album:
             audio['album'] = self.album
 
-        if self.year and len(self.year) > 0:
-            audio['date'] = self.year
+        if self.year:
+            audio['date'] = str(self.year)
 
-        if self.track and self.track > 0:
+        if self.number and self.number > 0:
             try:
-                integer = int(self.track)
+                integer = int(self.number)
                 if integer > 0:
                     audio['tracknumber'] = str(integer)
             except:
@@ -98,12 +98,12 @@ class Tag:
 
         self.title = re.search('^(?:\d\d? )?(.+)', title).group(1)
 
-    def set_track(self):
-        title = os.path.splitext(os.path.basename(self.file))[0]
+    def set_number(self):
+        title = os.path.basename(self.file)
         track = re.search('^\d\d?', title)
 
         if track:
-            self.track = track.group()
+            self.number = track.group()
 
     def set_album(self):
         album = os.path.basename(os.path.dirname(self.file))
@@ -125,7 +125,7 @@ class Tag:
         print "Title:", self.title
         print "Album:", self.album
         print "Year:", self.year
-        print "Tracknumber:", self.track
+        print "Tracknumber:", self.number
 
 class not_media_file(exceptions.Exception):
     def __init__(self):
@@ -220,8 +220,8 @@ def rename_file(tag, zero=True):
         return
 
     try:
-        track = int(tag.track)
-        if zero and track > 0:
+        track = int(tag.number)
+        if zero and track < 10:
             track = '0' + str(track)
         else:
             track = str(track)
@@ -318,7 +318,7 @@ def get_mb_data(id):
 
 def set_mb_data(tag, mb_data):
     tag.album = mb_data[0]
-    (tag.artist, tag.title) = mb_data[int(tag.track)]
+    (tag.artist, tag.title) = mb_data[int(tag.number)]
 
 def parse_mb_release(release):
     result = [release.title]
@@ -387,13 +387,16 @@ def guess_mb_release(tag_list):
 
 def find_track(tracks, number):
     for track in tracks:
-        if track.number == number:
-            return track
+        try:
+            if int(track.number) == number:
+                return track
+        except:
+            pass
 
 def set_from_cue(tag, cue_data):
-    track = find_track(cue_data.tracks, int(tag.track))
+    track = find_track(cue_data.tracks, int(tag.number))
     if track == None:
-        print "error, no track with such number in a cue file", tag.track
+        print "error, no track with such number in a cue file", tag.number
 
     tag.album = cue_data.title
     tag.title = track.title
@@ -510,7 +513,7 @@ def main():
 
     if options.tracklist:
         for tag in tag_list:
-            print tag.track + ".", tag.title
+            print tag.number + ".", tag.title
         exit
 
     if (len(sys.argv) - len(args) == 1):
@@ -529,10 +532,10 @@ def main():
             tag.set_year()
 
         if options.set_num:
-            tag.set_track()
+            tag.set_number()
 
-        if tag.track and tag.track.isdigit():
-            tag.track = str(int(tag.track) - int(options.shift))
+        if tag.number and tag.number.isdigit():
+            tag.number = str(int(tag.number) - int(options.shift))
 
         if options.rem_tag:
             remove_tag(tag.file)
@@ -561,7 +564,7 @@ def main():
             tag.year = unicode(options.Year, 'utf-8')
 
         if options.Number:
-            tag.track = unicode(options.Number, 'utf-8')
+            tag.number = options.Number
 
         if not options.mb_id and options.cap_tag:
             tag.lower_articles()
