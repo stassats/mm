@@ -4,28 +4,39 @@
 import os, re, readline, pipes
 import cue, tag
 
-junk = [("[\\]()`´':;,!|?=\"~*\\[]", ""),
-        ("[-_.\\\\ ]+", "_"),
-        ("&+", "_and_"),
-        ("@", "_at_"),
-        ("#", "_n"),
-        ("_+", "_"),
-        ("_$", ""),
-        ("^_", "")]
+## Readline and completion
 
-junk_re = [(re.compile(rx), sub) for (rx, sub) in junk]
+def filename_completer(text, state):
+    directory, rest = os.path.split(text)
+    if not os.path.exists(directory):
+        return
 
-def remove_junk(string):
-    string = string.lower()
-    for rx, sub in junk_re:
-        string = rx.sub(sub, string)
-    return string
+    files = os.listdir(directory)
+    possible_files = [file for file in files
+                      if re.match(rest, file)]
+    
+    if len(possible_files) <= state:
+        return
 
-def unjunk_filename(filename):
-    directory, filename = os.path.split(filename)
-    name, ext = os.path.splitext(filename)
-    name = remove_junk(name)
-    return os.path.join(directory, name + ext)
+    result = os.path.join(directory, possible_files[state])
+    if len(possible_files) == 1:
+        if os.path.isdir(result):
+            result += "/"
+        else:
+            result += " "
+
+    return result
+
+readline.set_completer_delims(" ")
+readline.parse_and_bind("tab: complete")
+readline.set_completer(filename_completer)
+
+def read_line(prompt, initial_text):
+    def startup_hook():
+        readline.insert_text(initial_text)
+
+    readline.set_startup_hook(startup_hook)
+    return raw_input(prompt)
 
 ##
 
@@ -103,14 +114,18 @@ def guess_from_tags(files):
 
 ##
 
-base_dir = os.path.expanduser("~/music/")
+music_dir = os.path.expanduser("~/music/")
 
 def make_filename(tags):
-    file_name = base_dir
+    file_name = music_dir
 
     artist, album, year = tags
-    artist = remove_junk(artist)
-    album = remove_junk(album)
+
+    if not artist or not album:
+        return music_dir
+
+    artist = tag.remove_junk(artist)
+    album = tag.remove_junk(album)
 
     if artist == 'various_artists':
         file_name += '_/'
@@ -136,73 +151,36 @@ def run_program(command, directory):
         return os.system(command)
     finally:
         os.chdir(original_cwd)
+
+def shntool(destination, files, cue=None):
+    dir, files = remove_directory(files)
+    encoder = "'cust ext=ogg oggenc -q8 -o %s/%%f -'" % destination
+
+    if cue:
+        mode = "split -t %n_%t -f " + pipes.quote(os.path.basename(cue))
+    else:
+        mode = "conv"
+
+    run_program("shntool " + mode + " -o " + encoder +
+                " -O always " + str.join(' ', map(pipes.quote, files))
+                ,dir)
         
-def decode_files(directory, files):
-    dir, files = remove_directory(files)
-
-    run_program("shntool conv -o 'cust ext=ogg oggenc -q8 -o %s/%%f -' -O always %s" % \
-                         (directory, str.join(' ', map(pipes.quote, files))),
-                dir)
-
-def decode_files_using_cue(directory, cue, files):
-    dir, files = remove_directory(files)
-    cue = os.path.basename(cue)
-
-    run_program("shntool split -t %%n_%%t -f %s -o \
-'cust ext=ogg oggenc -q8 -o %s/%%f -' -O always %s" % \
-                         (pipes.quote(cue), directory,
-                          str.join(' ', map(pipes.quote, files))),
-                dir)
-
-
-def filename_completer(text, state):
-    directory, rest = os.path.split(text)
-    if not os.path.exists(directory):
-        return
-
-    files = os.listdir(directory)
-    possible_files = [file for file in files
-                      if re.match(rest, file)]
-    
-    if len(possible_files) <= state:
-        return
-
-    result = os.path.join(directory, possible_files[state])
-    if len(possible_files) == 1:
-        if os.path.isdir(result):
-            result += "/"
-        else:
-            result += " "
-
-    return result
-
-readline.set_completer_delims(" ")
-readline.parse_and_bind("tab: complete")
-readline.set_completer(filename_completer)
-
-def read_line(prompt, initial_text):
-    def startup_hook():
-        readline.insert_text(initial_text)
-
-    readline.set_startup_hook(startup_hook)
-    return raw_input(prompt)
-
 def recode_release(release):
     cues, files = release
 
     if len(cues) == len(files) and len(cues) == 1:
-        destination = make_filename(guess_from_cue(cues[0]))
-        destination = read_line("Destination: ", destination)
-        decode_files_using_cue(destination, cues[0], files)
+        guess = guess_from_cue(cues[0])
     elif len(cues) == 0:
-        destination = make_filename(guess_from_tags(files))
-        destination = read_line("Destination: ", destination)
-        decode_files(destination, files)
+        guess = guess_from_tags(files)
     else:
-        destination = make_filename(guess_from_cue(cues[0]))
-        destination = read_line("Destination: ", destination)
-        decode_files(destination, files)
+        guess = guess_from_cue(cues[0]) or guess_from_tags(files)
+        cues = None
+
+    destination = read_line("Destination: ", make_filename(guess))
+    shntool(destination, files, cues and cues[0])
+
     os.system("tag -ganyr " + destination)
+    os.system("mpc update " + re.sub(music_dir, destination))
 
 def recode(directory):
     releases = get_dirs(directory)

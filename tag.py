@@ -74,7 +74,12 @@ class Tag:
             audio['date'] = self.year
 
         if self.track and self.track > 0:
-            audio['tracknumber'] = self.track
+            try:
+                integer = int(self.track)
+                if integer > 0:
+                    audio['tracknumber'] = str(integer)
+            except:
+                pass
 
         audio.save()
 
@@ -132,6 +137,31 @@ class not_album(exceptions.Exception):
 
 ########
 
+junk = [("[\\]()`´':;,!|?=\"~*\\[]", ""),
+        ("[-_.\\\\ ]+", "_"),
+        ("&+", "_and_"),
+        ("@", "_at_"),
+        ("#", "_n"),
+        ("_+", "_"),
+        ("_$", ""),
+        ("^_", "")]
+
+junk_re = [(re.compile(rx), sub) for (rx, sub) in junk]
+
+def remove_junk(string):
+    string = string.lower()
+    for rx, sub in junk_re:
+        string = rx.sub(sub, string)
+    return string
+
+def unjunk_filename(filename):
+    directory, filename = os.path.split(filename)
+    name, ext = os.path.splitext(filename)
+    name = remove_junk(name)
+    return os.path.join(directory, name + ext)
+
+##
+
 art = 'a an the and but or nor as at by for in of on to'.split()
 rom = re.compile('^m{,3}(c[md]|d?c{,3})(x[cl]|l?x{,3})(i[xv]|v?i{,3})$')
 tr = re.compile('/.+')
@@ -181,17 +211,27 @@ def capitalize(str):
 def get_file_ext(file):
     return os.path.splitext(file)[1][1:]
 
-def rename_file(tag):
-    if tag.track != '' and int(tag.track) < 10:
-        tag.track = '0' + str(int(tag.track))
-
-    if tag.title == None or len(tag.title) < 1:
+def rename_files(tags):
+    for tag in tags:
+        rename_file(tag, len(tags) > 9)
+    
+def rename_file(tag, zero=True):
+    if not tag.title:
         return
 
-    tit = string.lower(tag.title).replace(' ', '_')
-
+    try:
+        track = int(tag.track)
+        if zero and track > 0:
+            track = '0' + str(track)
+        else:
+            track = str(track)
+        track += '_'
+    except:
+        track = ''
+        print "WARNING: no track number on file " + tag.file
+    
     new_name = os.path.dirname(tag.file) + '/'
-    new_name += (tag.track + '_' + tit).replace("/", "_")
+    new_name += remove_junk(track + tag.title)
     new_name += os.path.splitext(tag.file)[1]
 
     if new_name == tag.file:
@@ -532,9 +572,10 @@ def main():
     if options.mb_guess:
         guess_mb_release(tag_list)
 
+    if options.rename:
+        rename_files(tag_list)
+        
     for tag in tag_list:
-        if options.rename:
-            rename_file(tag)
         tag.write_tag()
 
 if __name__ == "__main__":
