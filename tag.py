@@ -29,7 +29,7 @@ class Tag:
     title = None
     album = None
     year = None
-    track = None
+    number = None
     file = None
 
     def __init__(self, file = None):
@@ -53,7 +53,7 @@ class Tag:
             self.year = audio['date'][0]
 
         if audio.has_key('tracknumber'):
-            self.number = tr.sub('', audio['tracknumber'][0])
+            self.number = int(audio['tracknumber'][0].partition('/')[0])
 
         audio.save()
         return self
@@ -73,13 +73,9 @@ class Tag:
         if self.year:
             audio['date'] = str(self.year)
 
-        if self.number and self.number > 0:
-            try:
-                integer = int(self.number)
-                if integer > 0:
-                    audio['tracknumber'] = str(integer)
-            except:
-                pass
+        if self.number:
+            if self.number > 0:
+                audio['tracknumber'] = str(self.number)
 
         audio.save()
 
@@ -103,13 +99,15 @@ class Tag:
         track = re.search('^\d\d?', title)
 
         if track:
-            self.number = track.group()
+            self.number = int(track.group())
 
     def set_album(self):
         album = os.path.basename(os.path.dirname(self.file))
-        album = album.replace('_', ' ')
 
+        album = album.replace('_', ' ')
+        
         album = re.search('^(\d\d\w? )?(.+?)( \d{4})?$', album)
+
         self.album = album.group(2)
 
     def set_year(self):
@@ -125,7 +123,7 @@ class Tag:
         print "Title:", self.title
         print "Album:", self.album
         print "Year:", self.year
-        print "Tracknumber:", self.number
+        print "Tracknumber:", str(self.number)
 
 class not_media_file(exceptions.Exception):
     def __init__(self):
@@ -137,7 +135,7 @@ class not_album(exceptions.Exception):
 
 ########
 
-junk = [("[\\]()`´':;,!|?=\"~*\\[]", ""),
+junk = [("[\\]()`´':;,!|?=\/\"~*\\[]", ""),
         ("[-_.\\\\ ]+", "_"),
         ("&+", "_and_"),
         ("@", "_at_"),
@@ -164,7 +162,6 @@ def unjunk_filename(filename):
 
 art = 'a an the and but or nor as at by for in of on to'.split()
 rom = re.compile('^m{,3}(c[md]|d?c{,3})(x[cl]|l?x{,3})(i[xv]|v?i{,3})$')
-tr = re.compile('/.+')
 
 def isroman(i):
     return re.search(rom, i)
@@ -188,18 +185,18 @@ def articlify(string):
         return string
 
 def lower_articles(str):
-    if str == None or len(str) <= 0:
+    if not str:
         return
 
     words = str.split()
-    if len(words) <= 1:
+    if not words:
         return str
 
     words = [words[0]] + map(articlify, words[1:-1]) + [words[-1]]
     return string.join(words, ' ')
 
 def capitalize(str):
-    if str == None or len(str) <= 0:
+    if not str:
         return
 
     words = [word.capitalize() for word in str.split()]
@@ -218,15 +215,14 @@ def rename_files(tags):
 def rename_file(tag, zero=True):
     if not tag.title:
         return
-
-    try:
-        track = int(tag.number)
-        if zero and track < 10:
-            track = '0' + str(track)
+    
+    if tag.number:
+        if zero and tag.number < 10:
+            track = '0' + str(tag.number)
         else:
-            track = str(track)
+            track = str(tag.number)
         track += '_'
-    except:
+    else:
         track = ''
         print "WARNING: no track number on file " + tag.file
     
@@ -238,8 +234,8 @@ def rename_file(tag, zero=True):
         return
 
     if os.path.exists(new_name):
-        print 'Error: path', new_name, 'exists'
-        sys.exit(1)
+        print 'WARNING: path', new_name, 'exists'
+        return
 
     os.rename (tag.file, new_name)
 
@@ -288,14 +284,11 @@ def read_tags(file_list):
 
     return tag_list
 
-def get_tags_album(tag_list):
-    album = tag_list[0].album
-
-    for i in tag_list:
-        if album != i.album:
+def get_tags_album(tags):
+    if any(tag.album != tags[0].album for tag in tags):
             raise not_album
 
-    return album
+    return tags[0].album
 
 def get_tags_artist(tag_list):
     artist = tag_list[0].artist
@@ -318,7 +311,7 @@ def get_mb_data(id):
 
 def set_mb_data(tag, mb_data):
     tag.album = mb_data[0]
-    (tag.artist, tag.title) = mb_data[int(tag.number)]
+    tag.artist, tag.title = mb_data[tag.number]
 
 def parse_mb_release(release):
     result = [release.title]
@@ -387,16 +380,13 @@ def guess_mb_release(tag_list):
 
 def find_track(tracks, number):
     for track in tracks:
-        try:
-            if int(track.number) == number:
-                return track
-        except:
-            pass
+        if track.number == number:
+            return track
 
 def set_from_cue(tag, cue_data):
-    track = find_track(cue_data.tracks, int(tag.number))
-    if track == None:
-        print "error, no track with such number in a cue file", tag.number
+    track = find_track(cue_data.tracks, tag.number)
+    if not track:
+        print "error, no track with such number in a cue file", str(tag.number)
 
     tag.album = cue_data.title
     tag.title = track.title
@@ -406,7 +396,7 @@ def set_from_cue(tag, cue_data):
 
 def get_file_list(args):
     # Walk current directory if no argumnets was specified
-    if len(args) <= 0:
+    if not args:
         args = [os.getcwd()]
 
     file_list = []
@@ -502,18 +492,18 @@ def parse_opt():
     return parser.parse_args()
 
 def main():
-    (options, args) = parse_opt()
+    options, args = parse_opt()
 
     file_list = get_file_list(args)
 
-    if len(file_list) < 1:
+    if not file_list:
         exit()
 
     tag_list = read_tags(file_list)
 
     if options.tracklist:
         for tag in tag_list:
-            print tag.number + ".", tag.title
+            print str(tag.number) + ".", tag.title
         exit
 
     if (len(sys.argv) - len(args) == 1):
@@ -534,8 +524,8 @@ def main():
         if options.set_num:
             tag.set_number()
 
-        if tag.number and tag.number.isdigit():
-            tag.number = str(int(tag.number) - int(options.shift))
+        if tag.number:
+            tag.number = tag.number - int(options.shift)
 
         if options.rem_tag:
             remove_tag(tag.file)
@@ -564,7 +554,7 @@ def main():
             tag.year = unicode(options.Year, 'utf-8')
 
         if options.Number:
-            tag.number = options.Number
+            tag.number = int(options.Number)
 
         if not options.mb_id and options.cap_tag:
             tag.lower_articles()

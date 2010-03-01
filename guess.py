@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import os, re, readline, pipes
+import sys, os, re, readline, pipes, shutil
 import cue, tag
 
 ## Readline and completion
@@ -13,8 +13,8 @@ def filename_completer(text, state):
 
     files = os.listdir(directory)
     possible_files = [file for file in files
-                      if re.match(rest, file)]
-    
+                      if file.startswith(rest)]
+
     if len(possible_files) <= state:
         return
 
@@ -36,7 +36,10 @@ def read_line(prompt, initial_text):
         readline.insert_text(initial_text)
 
     readline.set_startup_hook(startup_hook)
-    return raw_input(prompt)
+    try:
+        return raw_input(prompt)
+    finally:
+        readline.set_startup_hook(None)
 
 ##
 
@@ -86,8 +89,8 @@ def is_various_artists(cue_album):
 
 def guess_from_cue(cue_file):
     album = cue.parse_cue(cue_file)
-    if album == None:
-        return None
+    if not album:
+        return
 
     va = is_various_artists(album)
 
@@ -95,7 +98,7 @@ def guess_from_cue(cue_file):
     for cue_track in album.tracks:
         track = tag.Tag()
         tracks.append(track)
-        
+
         track.artist = cue_track.performer or album.performer
         track.album = album.title
         track.title = cue_track.title
@@ -183,10 +186,11 @@ def shntool(destination, files, cue=None):
 
 def set_tags(directory, tags, remove=None):
     def track_number(file_name):
-        match = re.search('^\d\d?', os.path.basename(file_name))
+        match = re.search('^(\d_)?(\d\d?)',
+                          tag.remove_junk(os.path.basename(file_name)))
         if match:
-            return int(match.group())
-    
+            return int(match.group(2))
+
     file_list = [os.path.join(directory, file)
                  for file in os.listdir(directory)]
 
@@ -201,29 +205,51 @@ def set_tags(directory, tags, remove=None):
                 track_number(file)
         else:
             new_tag.file = file
+
             if remove:
                 tag.remove_tag(file)
+
+    if any(tag.album != tags[0].album for tag in tags):
+        for i in tags:
+            i.set_album()
+
+    if any(tag.year != tags[0].year for tag in tags):
+        for i in tags:
+            i.set_year()
 
     tag.guess_mb_release(tags)
     tag.rename_files(tags)
     map(tag.Tag.write_tag, tags)
-    
+
 def recode_release(release):
     cues, files = release
 
     if len(cues) == len(files) and len(cues) == 1:
         guess = guess_from_cue(cues[0])
-    elif len(cues) == 0:
+    elif not cues:
         guess = guess_from_tags(files)
     else:
         guess = guess_from_cue(cues[0]) or guess_from_tags(files)
         cues = None
 
-    destination = read_line("Destination: ", make_filename(guess))
-    shntool(destination, files, cues and cues[0])
+    if len(sys.argv) == 2:
+        destination = sys.argv[1]
+    else:
+        destination = read_line("Destination: ", make_filename(guess))
 
-    set_tags(destination, guess[3])
-    os.system("mpc update " + re.sub(music_dir, "", destination))
+    if all(extension(file) == ".mp3" for file in files):
+        if not os.path.exists(destination):
+            os.makedirs(destination)
+
+        for file in files:
+            shutil.copy(file, os.path.join(destination, file))
+
+        set_tags(destination, guess[3], True)
+    else:
+        shntool(destination, files, cues and cues[0])
+        set_tags(destination, guess[3])
+
+    os.system("mpc update " + destination.replace(music_dir, "", 1))
 
 def recode(directory):
     releases = get_dirs(directory)
