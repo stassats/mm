@@ -268,6 +268,9 @@ def recode_release(release):
         set_tags(destination, guess[3], True)
     else:
         shntool(destination, files, cues and cues[0])
+        if os.path.exists(destination + "/00_pregap.ogg"):
+            os.remove(destination + "/00_pregap.ogg")
+
         set_tags(destination, guess[3])
 
     os.system("mpc update " + destination.replace(music_dir, "", 1))
