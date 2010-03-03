@@ -245,7 +245,9 @@ def recode_release(release):
     elif not cues:
         guess = guess_from_tags(files)
     else:
-        guess = guess_from_cue(cues[0]) or guess_from_tags(files)
+        guess = guess_from_cue(cues[0])
+        if any(not part for part in guess[:-1]):
+            guess = guess_from_tags(files)
         cues = None
 
     if len(sys.argv) == 2:

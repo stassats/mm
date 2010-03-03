@@ -2,7 +2,7 @@ import ply.lex as lex
 import os
 
 tokens = ('STRING', 'NUMBER', 'REM', 'DATE', 'FLAG',
-          'TAG', 'TRACK', 'FILE_MODE', 'FILE', 'MODE', 'INDEX')
+          'TAG', 'TRACK', 'FILE_MODE', 'FILE', 'MODE', 'INDEX', 'PREGAP')
 
 def t_STRING(t):
     r'"(.+)"'
@@ -20,9 +20,10 @@ t_TRACK=r'TRACK'
 t_FILE=r'FILE'
 
 t_INDEX=r'INDEX'
+t_PREGAP=r'PREGAP'
 
 t_TAG=r'(TITLE)|(PERFORMER)|(SONGWRITER)|(COMPOSER)| \
-(ARRANGER)|(GENRE)|(CATALOG)|(PREGAP)|(FLAGS)'
+(ARRANGER)|(GENRE)|(CATALOG)|(FLAGS)'
 t_MODE=r'(AUDIO)'
 t_FILE_MODE=r'(WAVE)'
 t_FLAG=r'(DCP)'
@@ -62,6 +63,10 @@ import ply.yacc as yacc
 def p_expression_cue(p):
     'expression : tag file'
     p[0] = (p[1], p[2])
+
+def p_tag_pregap(p):
+    '''tag : PREGAP NUMBER ':' NUMBER ':' NUMBER'''
+    p[0] = [(p[1], (p[2], p[4], p[6]))]
 
 def p_tag_index(p):
     '''tag : INDEX NUMBER NUMBER ':' NUMBER ':' NUMBER'''
