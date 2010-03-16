@@ -148,6 +148,9 @@ def guess_from_tags(files):
 
 music_dir = os.path.expanduser("~/music/")
 
+def remove_article(string):
+    return re.sub('^(the_)|(a_)', '', string)
+
 def make_filename(tags):
     file_name = music_dir
 
@@ -156,7 +159,7 @@ def make_filename(tags):
     if not artist or not album:
         return music_dir
 
-    artist = tag.remove_junk(artist)
+    artist = remove_article(tag.remove_junk(artist))
     album = tag.remove_junk(album)
 
     if artist == 'various_artists':
@@ -246,7 +249,7 @@ def recode_release(release):
         guess = guess_from_tags(files)
     else:
         guess = guess_from_cue(cues[0])
-        if any(not part for part in guess[:-1]):
+        if not guess or any(not part for part in guess[:-1]):
             guess = guess_from_tags(files)
         cues = None
 
