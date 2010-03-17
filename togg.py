@@ -243,7 +243,7 @@ def set_tags(directory, tags, remove=None):
 def recode_release(release):
     cues, files = release
 
-    if len(cues) == len(files) and len(cues) == 1:
+    if cues and len(files) == 1:
         guess = guess_from_cue(cues[0])
     elif not cues:
         guess = guess_from_tags(files)
