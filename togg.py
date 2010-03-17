@@ -240,6 +240,14 @@ def set_tags(directory, tags, remove=None):
     tag.rename_files(tags)
     map(tag.Tag.write_tag, tags)
 
+def copy_mp3(files, destination):
+    if not os.path.exists(destination):
+        os.makedirs(destination)
+
+    for file in files:
+        new_name = tag.unjunk_filename(os.path.basename(file))
+        shutil.copy(file, os.path.join(destination, new_name))
+
 def recode_release(release):
     cues, files = release
 
@@ -262,12 +270,7 @@ def recode_release(release):
         return
 
     if all(extension(file) == ".mp3" for file in files):
-        if not os.path.exists(destination):
-            os.makedirs(destination)
-
-        for file in files:
-            shutil.copy(file, os.path.join(destination, file))
-
+        copy_mp3(files, destination)
         set_tags(destination, guess[3], True)
     else:
         shntool(destination, files, cues and cues[0])
