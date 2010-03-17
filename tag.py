@@ -226,7 +226,7 @@ def rename_file(tag, zero=True):
         track = ''
         print "WARNING: no track number on file " + tag.file
 
-    new_name = os.path.dirname(tag.file) + '/'
+    new_name = unicode(os.path.dirname(tag.file), 'utf-8', 'ignore') + '/'
     new_name += remove_junk(track + tag.title)
     new_name += os.path.splitext(tag.file)[1]
 
