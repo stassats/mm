@@ -333,7 +333,7 @@ def guess_mb_release(tag_list):
     artist = get_tags_artist(tag_list)
     album = get_tags_album(tag_list)
 
-    filter = ws.ReleaseFilter(query="%s and tracks:%d and artist:%s" \
+    filter = ws.ReleaseFilter(query='%s and tracks:%d and artist:"%s"' \
                                   % (album, len(tag_list), artist),
                               limit=5)
 
