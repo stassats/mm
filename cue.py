@@ -1,8 +1,8 @@
 import ply.lex as lex
 import os
 
-tokens = ('STRING', 'NUMBER', 'REM', 'DATE', 'FLAG',
-          'TAG', 'TRACK', 'FILE_MODE', 'FILE', 'MODE', 'INDEX', 'PREGAP')
+tokens = ('STRING', 'NUMBER', 'REM', 'DATE', 'ID',
+          'TAG', 'TRACK', 'FILE', 'INDEX', 'PREGAP')
 
 def t_STRING(t):
     r'"(.+)"'
@@ -23,10 +23,9 @@ t_INDEX=r'INDEX'
 t_PREGAP=r'PREGAP'
 
 t_TAG=r'(TITLE)|(PERFORMER)|(SONGWRITER)|(COMPOSER)| \
-(ARRANGER)|(GENRE)|(CATALOG)|(FLAGS)'
-t_MODE=r'(AUDIO)'
-t_FILE_MODE=r'(WAVE)'
-t_FLAG=r'(DCP)'
+(ARRANGER)|(GENRE)|(CATALOG)|(FLAGS)|(ISRC)'
+
+t_ID = '\w+'
 
 rem_exceptions = ['DATE']
 
@@ -47,14 +46,12 @@ def t_REM(t):
 t_ignore  = ' \t'
 
 def t_newline(t):
-    r'((\r\n)|\n)+'
+    r'((\r\n)|([^\r]?\n))+'
     t.lexer.lineno += len(t.value)
 
 def t_error(t):
     print "Illegal character '%s'" % t.value[0]
     t.lexer.skip(1)
-
-lexer = lex.lex()
 
 # Yacc
 
@@ -79,7 +76,7 @@ def p_tag_date(p):
 def p_tag_1(p):
     '''tag : TAG STRING
            | TAG NUMBER
-           | TAG FLAG'''
+           | TAG ID'''
     p[0] = [(p[1].lower(), p[2])]
 
 def p_tag_2(p):
@@ -87,7 +84,7 @@ def p_tag_2(p):
     p[0] = p[1] + p[2]
 
 def p_file_1(p):
-    '''file : FILE STRING FILE_MODE track'''
+    '''file : FILE STRING ID track'''
     p[0] = p[4]
 
 def p_file_2(p):
@@ -95,7 +92,7 @@ def p_file_2(p):
     p[0] = p[1] + p[2]
 
 def p_track_1(p):
-    '''track : TRACK NUMBER MODE tag'''
+    '''track : TRACK NUMBER ID tag'''
 
     p[0] = [[('number', p[2])] + p[4]]
 
@@ -105,8 +102,6 @@ def p_track_2(p):
 
 def p_error(p):
     print "Syntax error in:", p
-
-parser = yacc.yacc(debug=0, outputdir=os.path.dirname(__file__))
 
 class Album:
     performer = None
@@ -140,6 +135,9 @@ def fill_objects(parsed_cue):
     # for track in album.tracks:
     #     print track.title
     return album
+
+lexer = lex.lex(debug=0)
+parser = yacc.yacc(debug=0, outputdir=os.path.dirname(__file__))
 
 def parse_cue(file):
     with open(file) as file:
