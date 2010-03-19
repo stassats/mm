@@ -1,4 +1,5 @@
 import ply.lex as lex
+import ply.yacc as yacc
 import os
 
 tokens = ('STRING', 'NUMBER', 'REM', 'DATE', 'ID',
@@ -55,50 +56,59 @@ def t_error(t):
 
 # Yacc
 
-import ply.yacc as yacc
 
-def p_expression_cue(p):
-    'expression : tag file'
+def p_cue(p):
+    'cue : tags tracks'
     p[0] = (p[1], p[2])
 
-def p_tag_pregap(p):
-    '''tag : PREGAP NUMBER ':' NUMBER ':' NUMBER'''
-    p[0] = [(p[1], (p[2], p[4], p[6]))]
+def p_tags(p):
+    '''tags : tag
+            | tags tag'''
 
-def p_tag_index(p):
-    '''tag : INDEX NUMBER NUMBER ':' NUMBER ':' NUMBER'''
-    p[0] = [(p[1], (p[2], p[3], p[5], p[7]))]
+    if len(p) == 3:
+        if p[2]:
+            p[0] = p[1] + [p[2]]
+        else:
+            p[0] = p[1]
+    else:
+        if p[1]:
+            p[0] = [p[1]]
 
-def p_tag_date(p):
-    'tag : DATE NUMBER'
-    p[0] = [('date', p[2])]
-
-def p_tag_1(p):
+def p_tag(p):
     '''tag : TAG STRING
            | TAG NUMBER
            | TAG ID'''
-    p[0] = [(p[1].lower(), p[2])]
+    p[0] = (p[1].lower(), p[2])
 
-def p_tag_2(p):
-    '''tag : tag tag'''
-    p[0] = p[1] + p[2]
+def p_tag_file(p):
+    '''tag : FILE STRING ID'''
+    pass
 
-def p_file_1(p):
-    '''file : FILE STRING ID track'''
-    p[0] = p[4]
+def p_tag_pregap(p):
+    '''tag : PREGAP NUMBER ':' NUMBER ':' NUMBER'''
+    pass
 
-def p_file_2(p):
-    '''file : file file'''
-    p[0] = p[1] + p[2]
+def p_tag_index(p):
+    '''tag : INDEX NUMBER NUMBER ':' NUMBER ':' NUMBER'''
+    pass
 
-def p_track_1(p):
-    '''track : TRACK NUMBER ID tag'''
+def p_tag_date(p):
+    'tag : DATE NUMBER'
+    p[0] = ('date', p[2])
 
-    p[0] = [[('number', p[2])] + p[4]]
+def p_tracks(p):
+    '''tracks : track
+              | tracks track'''
+    if len(p) == 3:
+        p[0] = p[1] + [p[2]]
+    else:
+        p[0] = [p[1]]
 
-def p_track_2(p):
-    '''track : track track'''
-    p[0] = p[1] + p[2]
+def p_track(p):
+    '''track : TRACK NUMBER ID tags'''
+
+    p[0] = [('number', p[2])] + p[4]
+
 
 def p_error(p):
     print "Syntax error in:", p
@@ -132,8 +142,8 @@ def fill_objects(parsed_cue):
     fill_object(album, parsed_cue[0])
     for track in parsed_cue[1]:
         album.tracks.append(fill_object(Track(), track))
-    # for track in album.tracks:
-    #     print track.title
+    for track in album.tracks:
+        print track.title
     return album
 
 lexer = lex.lex(debug=0)
@@ -141,4 +151,4 @@ parser = yacc.yacc(debug=0, outputdir=os.path.dirname(__file__))
 
 def parse_cue(file):
     with open(file) as file:
-        return fill_objects(parser.parse(file.read()))
+        return fill_objects (parser.parse(file.read(), debug=0))
