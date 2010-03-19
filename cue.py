@@ -142,8 +142,8 @@ def fill_objects(parsed_cue):
     fill_object(album, parsed_cue[0])
     for track in parsed_cue[1]:
         album.tracks.append(fill_object(Track(), track))
-    for track in album.tracks:
-        print track.title
+    # for track in album.tracks:
+    #     print track.title
     return album
 
 lexer = lex.lex(debug=0)
