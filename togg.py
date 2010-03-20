@@ -203,7 +203,7 @@ def shntool(destination, files, cue=None):
 def set_tags(directory, tags, remove=None):
 
     def track_number(file_name, common=""):
-        match = re.search('^' + common + '(\d\d?)',
+        match = re.search('^' + re.escape(common) + '(\d\d?)',
                           tag.remove_junk(os.path.basename(file_name)))
         if match:
             return int(match.group(1))
@@ -214,7 +214,8 @@ def set_tags(directory, tags, remove=None):
     if not file_list:
         return
 
-    common = os.path.basename(os.path.commonprefix(file_list))
+    common = os.path.basename(os.path.commonprefix
+                              (map(tag.unjunk_filename, file_list)))
 
     for file in file_list:
         new_tag = tag.find_track(tags, track_number(file, common))
