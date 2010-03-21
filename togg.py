@@ -149,7 +149,7 @@ def guess_from_tags(files):
 music_dir = os.path.expanduser("~/music/")
 
 def remove_article(string):
-    return re.sub('^(the_)|(a_)', '', string)
+    return re.sub('^(the|a)_', '', string)
 
 def make_filename(tags):
     file_name = music_dir
@@ -233,7 +233,8 @@ def set_tags(directory, tags, remove=None):
         for i in tags:
             i.set_album()
 
-    if any(tag.year != tags[0].year for tag in tags):
+    if any(not tags[0].year or tag.year != tags[0].year
+           for tag in tags):
         for i in tags:
             i.set_year()
 
