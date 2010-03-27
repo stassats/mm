@@ -96,6 +96,13 @@ def is_various_artists(cue_album):
 
     return False
 
+def parse_year(year):
+    if isinstance(year, basestring):
+        match = re.search("\d{4}", year)
+        if match:
+            year = match.group()
+    return year
+
 def guess_from_cue(cue_file):
     album = cue.parse_cue(cue_file)
     if not album:
@@ -114,8 +121,14 @@ def guess_from_cue(cue_file):
         track.year = album.date
         track.number = cue_track.number
 
+    if album.date:
+        year = parse_year(album.date)
+    else:
+        year = parse_year(os.path.basename(
+                os.path.dirname(os.path.abspath(cue_file))))
+
     return ("Various Artists" if va else album.performer,
-            album.title, album.date, tracks)
+            album.title, year, tracks)
 
 def guess_from_tags(files):
     first = tag.Tag(files[0])
@@ -141,6 +154,12 @@ def guess_from_tags(files):
     for track in tracks:
         if not track.number:
             track.set_number()
+
+    if year:
+        year = parse_year(year)
+    else:
+        year = parse_year(os.path.basename(
+                os.path.dirname(os.path.abspath(files[0]))))
 
     return (artist, album, year, tracks)
 
@@ -170,10 +189,6 @@ def make_filename(tags):
     file_name += album
     
     if year:
-        if isinstance(year, basestring):
-            match = re.search("\d{4}", year)
-            if match:
-                year = match.group()
         file_name += '_' + str(year)
 
     return file_name
