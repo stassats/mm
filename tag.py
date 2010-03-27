@@ -310,8 +310,12 @@ def get_mb_data(id):
     return parse_mb_release(release)
 
 def set_mb_data(tag, mb_data):
-    tag.album = mb_data[0]
-    tag.artist, tag.title = mb_data[tag.number]
+    track_number = tag.number
+    if track_number < len(mb_data):
+        tag.album = mb_data[0]
+        tag.artist, tag.title = mb_data[tag.number]
+    else:
+        print 'WARNING: there is no track', track_number, 'in this MusicBrainz release'
 
 def parse_mb_release(release):
     result = [release.title]

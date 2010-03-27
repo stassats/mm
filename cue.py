@@ -24,7 +24,7 @@ t_INDEX=r'INDEX'
 t_PREGAP=r'PREGAP'
 
 t_TAG=r'(TITLE)|(PERFORMER)|(SONGWRITER)|(COMPOSER)| \
-(ARRANGER)|(GENRE)|(CATALOG)|(FLAGS)|(ISRC)'
+(ARRANGER)|(CATALOG)|(FLAGS)|(ISRC)'
 
 t_ID = '\w+'
 
@@ -34,15 +34,17 @@ def t_REM(t):
     r'REM\s*(.*)'
 
     remaining = t.lexer.lexmatch.group(5)
-    [first_word, rest] = remaining.split(None,1)
+
+    split = remaining.split(None, 1)
+    if len(split) < 2:
+        return
+    first_word, rest = split
 
     if first_word in rem_exceptions:
         t.type = first_word
         t.value = first_word
         t.lexer.lexpos -= len(rest)
         return t
-    else:
-        pass
 
 t_ignore  = ' \t'
 
