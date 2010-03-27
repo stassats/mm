@@ -168,8 +168,12 @@ def make_filename(tags):
         file_name += artist[0] + '/' + artist + '/'
 
     file_name += album
-
+    
     if year:
+        if isinstance(year, basestring):
+            match = re.search("\d{4}", year)
+            if match:
+                year = match.group()
         file_name += '_' + str(year)
 
     return file_name
@@ -203,8 +207,8 @@ def shntool(destination, files, cue=None):
 def set_tags(directory, tags, remove=None):
 
     def track_number(file_name, common=""):
-        match = re.search('^' + re.escape(common) + '(\d\d?)',
-                          tag.remove_junk(os.path.basename(file_name)))
+        match = re.match(re.escape(common) + '(\d\d?)',
+                         tag.remove_junk(os.path.basename(file_name)))
         if match:
             return int(match.group(1))
 
