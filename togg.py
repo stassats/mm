@@ -100,8 +100,7 @@ def parse_year(year):
     if isinstance(year, basestring):
         match = re.search("\d{4}", year)
         if match:
-            year = match.group()
-    return year
+            return match.group()
 
 def guess_from_cue(cue_file):
     album = cue.parse_cue(cue_file)
@@ -121,14 +120,16 @@ def guess_from_cue(cue_file):
         track.year = album.date
         track.number = cue_track.number
 
+    year = None
     if album.date:
         year = parse_year(album.date)
-    else:
+
+    if not year:
         year = parse_year(os.path.basename(
                 os.path.dirname(os.path.abspath(cue_file))))
 
     return ("Various Artists" if va else album.performer,
-            album.title, year, tracks)
+            album.title, year or album.date, tracks)
 
 def guess_from_tags(files):
     first = tag.Tag(files[0])
@@ -155,13 +156,15 @@ def guess_from_tags(files):
         if not track.number:
             track.set_number()
 
+    corrected_year = None
     if year:
-        year = parse_year(year)
-    else:
-        year = parse_year(os.path.basename(
-                os.path.dirname(os.path.abspath(files[0]))))
+        corrected_year = parse_year(year)
 
-    return (artist, album, year, tracks)
+    if not corrected_year:
+        corrected_year = parse_year(os.path.basename(
+                os.path.dirname(os.path.abspath(cue_file))))
+            
+    return (artist, album, corrected_year or year, tracks)
 
 ##
 
