@@ -162,7 +162,7 @@ def guess_from_tags(files):
 
     if not corrected_year:
         corrected_year = parse_year(os.path.basename(
-                os.path.dirname(os.path.abspath(cue_file))))
+                os.path.dirname(os.path.abspath(files[0]))))
             
     return (artist, album, corrected_year or year, tracks)
 

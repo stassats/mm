@@ -108,8 +108,10 @@ def p_tracks(p):
 
 def p_track(p):
     '''track : TRACK NUMBER ID tags'''
+    p[0] = [('number', p[2])]
 
-    p[0] = [('number', p[2])] + p[4]
+    if p[4]:
+        p[0] += p[4]
 
 
 def p_error(p):

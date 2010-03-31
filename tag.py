@@ -506,7 +506,7 @@ def main():
     if options.tracklist:
         for tag in tag_list:
             print str(tag.number) + ".", tag.title
-        exit
+        exit()
 
     if (len(sys.argv) - len(args) == 1):
         map(Tag.display_tag, tag_list)
