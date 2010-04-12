@@ -1,8 +1,15 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import sys, os, re, readline, pipes, shutil
-import cue, tag
+import sys
+import os
+import re
+import readline
+import pipes
+import shutil
+
+import cue
+import tag
 
 ## Readline and completion
 
@@ -187,7 +194,10 @@ def make_filename(tags):
     if artist == 'various_artists':
         file_name += '_/'
     else:
-        file_name += artist[0] + '/' + artist + '/'
+        first_letter = artist[0]
+        if first_letter.isdigit():
+            first_letter = '0'
+        file_name += first_letter + '/' + artist + '/'
 
     file_name += album
     

@@ -1,6 +1,6 @@
+import os
 import ply.lex as lex
 import ply.yacc as yacc
-import os
 
 tokens = ('STRING', 'NUMBER', 'REM', 'DATE', 'ID',
           'TAG', 'TRACK', 'FILE', 'INDEX', 'PREGAP')

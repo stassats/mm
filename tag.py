@@ -6,8 +6,11 @@
 
 # Requires PythonMusicBrainz2, mutagen
 
-import os, sys
-import re, string
+import os
+import sys
+import time
+import re
+import string
 import exceptions
 
 import musicbrainz2.webservice as ws
@@ -32,7 +35,7 @@ class Tag:
     number = None
     file = None
 
-    def __init__(self, file = None):
+    def __init__(self, file=None):
         if file:
            self.read_tag(file)
 
@@ -67,7 +70,7 @@ class Tag:
         if self.title:
             audio['title'] = self.title.replace('`', "'")
 
-        if self.album:
+        if self.album or self.album == "":
             audio['album'] = self.album
 
         if self.year:
@@ -333,6 +336,19 @@ def parse_mb_release(release):
 
     return result
 
+def mb_request(name, *args, **kwargs):
+    while True:
+        try:
+            # MB doesn't like more than one request per second
+            time.sleep(1)
+            return name(*args, **kwargs)
+        except ws.WebServiceError as exception:
+            if exception.msg and exception.msg.find("503"):
+                print "WARNING: 503"
+                time.sleep(1)
+            else:
+                raise(exception)
+    
 def guess_mb_release(tag_list):
     artist = get_tags_artist(tag_list)
     album = get_tags_album(tag_list)
@@ -341,21 +357,20 @@ def guess_mb_release(tag_list):
                                   % (album, len(tag_list), artist),
                               limit=5)
 
-    results = q.getReleases(filter=filter)
+    results = mb_request(q.getReleases, filter=filter)
     res_len = len(results)
 
     if res_len > 0:
-        releases = []
+        inc = ws.ReleaseIncludes(tracks=True, artist=True)
+        
+        releases = [mb_request(q.getReleaseById, result.release.id, inc)
+                    for result in results]
 
         print "Data from tags:", artist, '-', album, "[" + str(len(tag_list)), "tracks]\n"
         print "Variants from MusicBrainz:"
 
-        inc = ws.ReleaseIncludes(tracks=True, artist=True)
-
         for i in range(res_len):
             id = results[i].release.id
-            releases.append(q.getReleaseById(id, inc))
-
             print str(i + 1) + ")", results[i].release.artist.name, '-', \
                 results[i].release.title, \
                 "[" + str(len(releases[i].tracks)), "tracks]" , \
