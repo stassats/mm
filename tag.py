@@ -348,7 +348,34 @@ def mb_request(name, *args, **kwargs):
                 time.sleep(1)
             else:
                 raise(exception)
-    
+
+class SearchResult:
+    id = None
+    artist = None
+    title = None
+    score = 0
+
+    def set_from_mb(self, mb_release):
+        release = mb_release.release
+        self.id = release.id
+        self.score = mb_release.score
+        self.artist = release.artist.name
+        self.title = release.title
+        self.tracks = mb_request(q.getReleaseById,
+                                 release.id,
+                                 ws.ReleaseIncludes(tracks=True, artist=True))
+        return self
+
+def search_mb(query, tracks_count):
+    results = []
+    includes = ws.ReleaseIncludes(tracks=True, artist=True)
+
+    for result in mb_request(q.getReleases, query):
+        if result.release.tracksCount == tracks_count:
+            results.append(SearchResult().set_from_mb(result))
+
+    return results
+
 def guess_mb_release(tag_list):
     artist = get_tags_artist(tag_list)
     album = get_tags_album(tag_list)
@@ -357,26 +384,22 @@ def guess_mb_release(tag_list):
                                   % (album, len(tag_list), artist),
                               limit=5)
 
-    results = mb_request(q.getReleases, filter=filter)
-    res_len = len(results)
+    releases = search_mb(filter, len(tag_list))
+    res_len = len(releases)
 
-    if res_len > 0:
-        inc = ws.ReleaseIncludes(tracks=True, artist=True)
-        
-        releases = [mb_request(q.getReleaseById, result.release.id, inc)
-                    for result in results]
-
+    if res_len == 0:
+        print "No releases found"
+    else:
         print "Data from tags:", artist, '-', album, "[" + str(len(tag_list)), "tracks]\n"
         print "Variants from MusicBrainz:"
 
         for i in range(res_len):
-            id = results[i].release.id
-            print str(i + 1) + ")", results[i].release.artist.name, '-', \
-                results[i].release.title, \
-                "[" + str(len(releases[i].tracks)), "tracks]" , \
-                "(" + str(results[i].score), "%)"
 
-            print " Details:", id + ".html\n"
+            print str(i + 1) + ")", releases[i].artist, '-', \
+                releases[i].title, \
+                "(" + str(releases[i].score), "%)"
+
+            print " Details:", releases[i].id + ".html\n"
 
         while True:
             a = raw_input("Number of the release or a release id (zero for none): ")
@@ -386,14 +409,15 @@ def guess_mb_release(tag_list):
             elif int(a) <= res_len and int(a) > -1:
                 a = int(a)
                 if a == 0: return
-                
-                mb_data = parse_mb_release(releases[a - 1])
+
+                mb_data = parse_mb_release(releases[a - 1].tracks)
                 break
             else:
                 print "Must be a positive number less than %d" % res_len
 
         for tag in tag_list:
             set_mb_data(tag, mb_data)
+
 
 def find_track(tracks, number):
     for track in tracks:
