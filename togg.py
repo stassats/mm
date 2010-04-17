@@ -261,7 +261,7 @@ def set_tags(directory, tags, remove=None):
             if remove:
                 tag.remove_tag(file)
 
-    if any(tag.album != tags[0].album for tag in tags):
+    if any(not tag.album or tag.album != tags[0].album for tag in tags):
         for i in tags:
             i.set_album()
 
