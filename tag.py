@@ -22,6 +22,7 @@ from mutagen.easyid3 import EasyID3
 import mutagen.id3
 from mutagen.musepack import Musepack
 from mutagen.mp4 import MP4
+from mutagen.wavpack import WavPack
 
 ####
 
@@ -255,6 +256,8 @@ def open_file(file):
         audio = Musepack(file)
     elif ftype == 'm4a':
         audio = MP4(file)
+    elif ftype == 'wv':
+        audio = WavPack(file)
     elif ftype == 'mp3':
         try:
             audio = EasyID3(file)
