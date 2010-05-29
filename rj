@@ -15,6 +15,7 @@
 (define *start* #f)
 (define *amount* -1)
 (define *depth* #f)
+(define *format-number* #f)
 
 (define (main args)
   (let ((args (options (cdr args))))
@@ -50,16 +51,17 @@
     (replace *what* *with*))
   (when *reverse*
     (replace "^(\\d{4})_(.+)" "\\2_\\1"))
-
   (when *start*
     (let ((new (change-number name *start* *amount*)))
       (when new (set! name new))))
-
+  (when *format-number*
+    (let ((new (format-number name)))
+      (when new (set! name new))))
   (path-swap-extension (build-path path name) extension))
 
 (define (change-number string start amount)
   "Change number from <start> by <amount>: 10_file -> 11_file"
-  (rxmatch-let (rxmatch #/^(\d+)(\D.+)$/ string)
+  (rxmatch-let (rxmatch #/^(\d+)(\D.+)?$/ string)
                (#f snum rest)
     (if snum
         (let ((num (string->number snum)))
@@ -69,8 +71,17 @@
                              (string-length str))))
                 (string-append
                  (make-string (max dif 0) #\0)
-                 str rest))
+                 str (or rest "")))
               #f))
+        #f)))
+
+(define (format-number string)
+  (rxmatch-let (rxmatch #/^(\d+)$/ string)
+               (#f snum)
+    (if snum
+        (if (< (string->number snum) 10)
+            (string-append "0" string)
+            #f)
         #f)))
 
 (define (walk-directories proc files depth)
@@ -92,14 +103,15 @@
 
 (define (options args)
   (let-args args
-     ((#f "d|delete=s"    => (cut set! *what* <>))
-      (#f "w|with=s"      => (cut set! *with* <>))
-      (#f "r|reverse"     => (cut set! *reverse* #t))
-      (#f "s|start=n"     => (cut set! *start* <>))
-      (#f "a|amount=n" -1 => (cut set! *amount* <>))
-      (#f "m|max-depth=n" => (cut set! *depth* <>))
-      (#f "t|test"        => (cut set! *test* #t))
-      (#f "h|help"        => help)
+     ((#f "d|delete=s"      => (cut set! *what* <>))
+      (#f "w|with=s"        => (cut set! *with* <>))
+      (#f "r|reverse"       => (cut set! *reverse* #t))
+      (#f "s|start=n"       => (cut set! *start* <>))
+      (#f "a|amount=n" -1   => (cut set! *amount* <>))
+      (#f "m|max-depth=n"   => (cut set! *depth* <>))
+      (#f "t|test"          => (cut set! *test* #t))
+      (#f "f|format-number" => (cut set! *format-number* #t))
+      (#f "h|help"          => help)
       . rest)
     (if (pair? rest)
         (map simplify-path rest)
