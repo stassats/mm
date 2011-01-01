@@ -31,13 +31,10 @@
      args
      *depth*)))
 
-(define (process-file file)
-  (define name (string-downcase (path-sans-extension (sys-basename file))))
-  (define path (sys-dirname file))
-  (define extension (path-extension file))
+(define (process-string string)
   (define (replace what with)
-    (set! name (regexp-replace-all what name with)))
-
+    (set! string (regexp-replace-all what string with)))
+  (set! string (string-downcase string))
   (for-each (lambda (x) (replace (car x) (cadr x)))
             '(("[\\]()`´':;,!|?=\"~*\\[]" "")
               ("[-_.\\\\ ]+" "_")
@@ -52,12 +49,27 @@
   (when *reverse*
     (replace "^(\\d{4})_(.+)" "\\2_\\1"))
   (when *start*
-    (let ((new (change-number name *start* *amount*)))
-      (when new (set! name new))))
+    (let ((new (change-number string *start* *amount*)))
+      (when new (set! string new))))
   (when *format-number*
-    (let ((new (format-number name)))
-      (when new (set! name new))))
-  (path-swap-extension (build-path path name) extension))
+    (let ((new (format-number string)))
+      (when new (set! string new))))
+  string)
+
+(define (process-file file)
+  (let* ((path (sys-dirname file))
+         (name (process-string (path-sans-extension (sys-basename file))))
+         (extension (or (path-extension file) ""))
+         (processed-extension (process-string extension)))
+    (build-path path
+                (string-append name
+                               (cond ((zero? (string-length extension))
+                                      "")
+                                     ((string-ci=? extension processed-extension)
+                                      ".")
+                                     (else
+                                      "_"))
+                               processed-extension))))
 
 (define (change-number string start amount)
   "Change number from <start> by <amount>: 10_file -> 11_file"
@@ -67,7 +79,7 @@
         (let ((num (string->number snum)))
           (if (>= num start)
               (let* ((str (number->string (+ amount num)))
-                     (dif (- (string-length snum) ;; Count of padded zeros
+                     (dif (- (string-length snum) ;; Number of padded zeros
                              (string-length str))))
                 (string-append
                  (make-string (max dif 0) #\0)
