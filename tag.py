@@ -23,6 +23,7 @@ import mutagen.id3
 from mutagen.musepack import Musepack
 from mutagen.mp4 import MP4
 from mutagen.wavpack import WavPack
+from mutagen.apev2 import APEv2
 
 ####
 
@@ -245,6 +246,10 @@ def rename_file(tag, zero=True):
 
     tag.file = new_name
 
+def delete_ape_tag(file):
+    if get_file_ext(file) == 'mp3':
+        mutagen.apev2.delete(file)
+    
 def open_file(file):
     ftype = get_file_ext(file)
 
@@ -277,6 +282,7 @@ def remove_tag(file):
     audio = open_file(file)
     audio.delete()
     audio.save()
+    delete_ape_tag(file)
 
 def read_tags(file_list):
     tag_list = []
@@ -385,7 +391,7 @@ def guess_mb_release(tag_list):
 
     filter = ws.ReleaseFilter(query='%s and tracks:%d and artist:"%s"' \
                                   % (album, len(tag_list), artist),
-                              limit=5)
+                              limit=7)
 
     releases = search_mb(filter, len(tag_list))
     res_len = len(releases)
