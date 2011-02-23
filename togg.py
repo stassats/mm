@@ -110,7 +110,12 @@ def parse_year(year):
             return match.group()
 
 def guess_from_cue(cue_file):
-    album = cue.parse_cue(cue_file)
+    try:
+        album = cue.parse_cue(cue_file)
+    except Exception as e:
+        print e
+        return
+        
     if not album:
         return
 
