@@ -197,8 +197,10 @@ def lower_articles(str):
     if not words:
         return str
 
-    words = [words[0]] + map(articlify, words[1:-1]) + [words[-1]]
-    return string.join(words, ' ')
+    articled_words = [words[0]] + map(articlify, words[1:-1])
+    if len(words) > 1:
+        articled_words += [words[-1]]
+    return string.join(articled_words, ' ')
 
 def capitalize(str):
     if not str:
