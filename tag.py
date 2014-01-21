@@ -4,7 +4,7 @@
 # This software is in the public domain and is
 # provided with absolutely no warranty.
 
-# Requires PythonMusicBrainz2, mutagen
+# Requires PythonMusicBrainz2, python-musicbrainzngs, mutagen
 
 import os
 import sys
@@ -14,6 +14,7 @@ import string
 import exceptions
 
 import musicbrainz2.webservice as ws
+import musicbrainzngs as m
 from optparse import OptionParser
 
 from mutagen.flac import FLAC
@@ -28,6 +29,7 @@ from mutagen.apev2 import APEv2
 ####
 
 q = ws.Query()
+m.set_useragent("Example music app", "0.1", "http://example.com/music")
 
 class Tag:
     artist = None
@@ -251,7 +253,7 @@ def rename_file(tag, zero=True):
 def delete_ape_tag(file):
     if get_file_ext(file) == 'mp3':
         mutagen.apev2.delete(file)
-    
+
 def open_file(file):
     ftype = get_file_ext(file)
 
@@ -314,14 +316,15 @@ def get_tags_artist(tag_list):
     return artist
 
 def get_mb_data(id):
+    id, disc_id = re.search('^(?:http://.+/)?(.+?)(?:#disc(\d+))?$', id).groups()
+
     try:
-        inc = ws.ReleaseIncludes(tracks=True, artist=True)
-        release = q.getReleaseById(id, inc)
-    except ws.WebServiceError, exceptions.e:
+        release = m.get_release_by_id(id, ['artists','recordings','artist-credits'])['release']
+    except m.MusicBrainzError, exceptions.e:
         print 'Error:', exceptions.e
         sys.exit(1)
 
-    return parse_mb_release(release)
+    return parse_mb_release(release, disc_id)
 
 def set_mb_data(tag, mb_data):
     track_number = tag.number
@@ -331,19 +334,28 @@ def set_mb_data(tag, mb_data):
     else:
         print 'WARNING: there is no track', track_number, 'in this MusicBrainz release'
 
-def parse_mb_release(release):
-    result = [release.title]
-    release_artist = release.getArtist().name
+def mb_get_artist(release):
+    for x in release['artist-credit']:
+        if x['artist']:
+            return x['artist']['name']
 
-    for track in release.tracks:
-        artist = track.getArtist()
+def mb_get_tracks(release, disc_id):
+    for disc in release['medium-list']:
+        if disc['position'] == disc_id:
 
-        if artist:
-            artist = artist.name
-        else:
-            artist = release_artist
+            return disc['track-list']
 
-        result.append([artist, track.title])
+    return release['medium-list'][0]['track-list']
+
+def parse_mb_release(release, disc_id=None):
+    result = [release['title']]
+    release_artist = mb_get_artist(release)
+
+    for track in mb_get_tracks(release, disc_id):
+        recording = track['recording']
+        artist = recording['artist-credit-phrase'] or release_artist
+
+        result.append([artist, recording['title']])
 
     return result
 
@@ -387,6 +399,22 @@ def search_mb(query, tracks_count):
 
     return results
 
+def old_parse_mb_release(release):
+    result = [release.title]
+    release_artist = release.getArtist().name
+
+    for track in release.tracks:
+        artist = track.getArtist()
+
+        if artist:
+            artist = artist.name
+        else:
+            artist = release_artist
+
+        result.append([artist, track.title])
+
+    return result
+
 def guess_mb_release(tag_list):
     artist = get_tags_artist(tag_list)
     album = get_tags_album(tag_list)
@@ -421,7 +449,7 @@ def guess_mb_release(tag_list):
                 a = int(a)
                 if a == 0: return
 
-                mb_data = parse_mb_release(releases[a - 1].tracks)
+                mb_data = old_parse_mb_release(releases[a - 1].tracks)
                 break
             else:
                 print "Must be a positive number less than %d" % res_len
