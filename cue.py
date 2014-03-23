@@ -2,7 +2,7 @@ import os
 import ply.lex as lex
 import ply.yacc as yacc
 
-tokens = ('STRING', 'NUMBER', 'REM', 'DATE', 'ID',
+tokens = ('STRING', 'TIME', 'NUMBER', 'REM', 'DATE', 'ID',
           'TAG', 'TRACK', 'FILE', 'INDEX', 'PREGAP')
 
 def t_STRING(t):
@@ -10,12 +10,17 @@ def t_STRING(t):
     t.value = t.lexer.lexmatch.group(2)
     return t
 
+def t_TIME(t):
+    r'(\d+):(\d+):(\d+)'
+    t.value = [int(t.lexer.lexmatch.group(4)),
+               int(t.lexer.lexmatch.group(5)),
+               int(t.lexer.lexmatch.group(6))]
+    return t
+
 def t_NUMBER(t):
     r'\d+'
     t.value = int(t.value)
     return t
-
-literals = ':'
 
 t_TRACK=r'TRACK'
 t_FILE=r'FILE'
@@ -23,23 +28,26 @@ t_FILE=r'FILE'
 t_INDEX=r'INDEX'
 t_PREGAP=r'PREGAP'
 
-t_TAG=r'(TITLE)|(PERFORMER)|(SONGWRITER)|(COMPOSER)| \
+t_TAG=r'(TITLE)|(PERFORMER)|(SONGWRITER)|(COMPOSER)|\
 (ARRANGER)|(CATALOG)|(FLAGS)|(ISRC)'
 
-t_ID = '\w+'
+t_ID = '.+'
 
 rem_exceptions = ['DATE']
 
 def t_REM(t):
-    r'REM\s*(.*)'
+    r'REM\s*(?P<rest>.*)'
 
-    remaining = t.lexer.lexmatch.group(5)
+    remaining = t.lexer.lexmatch.group('rest')
+
+    if not remaining:
+        return
 
     split = remaining.split(None, 1)
     if len(split) < 2:
         return
     first_word, rest = split
-
+    
     if first_word in rem_exceptions:
         t.type = first_word
         t.value = first_word
@@ -80,6 +88,7 @@ def p_tag(p):
     '''tag : TAG STRING
            | TAG NUMBER
            | TAG ID'''
+
     p[0] = (p[1].lower(), p[2])
 
 def p_tag_file(p):
@@ -87,11 +96,11 @@ def p_tag_file(p):
     pass
 
 def p_tag_pregap(p):
-    '''tag : PREGAP NUMBER ':' NUMBER ':' NUMBER'''
+    '''tag : PREGAP TIME'''
     pass
 
 def p_tag_index(p):
-    '''tag : INDEX NUMBER NUMBER ':' NUMBER ':' NUMBER'''
+    '''tag : INDEX NUMBER TIME'''
     pass
 
 def p_tag_date(p):
