@@ -69,13 +69,13 @@ class Tag:
         audio = open_file(self.file)
 
         if self.artist:
-            audio['artist'] = self.artist
+            audio['artist'] = self.artist.replace(u'‐', '-')
 
         if self.title:
-            audio['title'] = self.title.replace('`', "'")
+            audio['title'] = self.title.replace(u'‐', '-').replace('`', "'")
 
         if self.album or self.album == "":
-            audio['album'] = self.album
+            audio['album'] = self.album.replace(u'‐', '-')
 
         if self.year:
             audio['date'] = str(self.year)
