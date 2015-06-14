@@ -1,6 +1,7 @@
 import os
 import ply.lex as lex
 import ply.yacc as yacc
+import codecs
 
 tokens = ('STRING', 'TIME', 'NUMBER', 'REM', 'DATE', 'ID',
           'TAG', 'TRACK', 'FILE', 'INDEX', 'PREGAP')
@@ -162,6 +163,6 @@ def fill_objects(parsed_cue):
 lexer = lex.lex(debug=0)
 parser = yacc.yacc(debug=0, outputdir=os.path.dirname(__file__))
 
-def parse_cue(file):
-    with open(file) as file:
+def parse_cue(file, encoding='utf-8'):
+    with codecs.open(file, encoding=encoding) as file:
         return fill_objects (parser.parse(file.read(), debug=0))

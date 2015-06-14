@@ -69,13 +69,13 @@ class Tag:
         audio = open_file(self.file)
 
         if self.artist:
-            audio['artist'] = self.artist.replace(u'‐', '-')
+            audio['artist'] = ensure_unicode(self.artist).replace(u'‐', '-')
 
         if self.title:
-            audio['title'] = self.title.replace(u'‐', '-').replace('`', "'")
+            audio['title'] = ensure_unicode(self.title).replace(u'‐', '-').replace('`', "'")
 
         if self.album or self.album == "":
-            audio['album'] = self.album.replace(u'‐', '-')
+            audio['album'] = ensure_unicode(self.album).replace(u'‐', '-')
 
         if self.year:
             audio['date'] = str(self.year)
@@ -142,7 +142,7 @@ class not_album(exceptions.Exception):
 
 ########
 
-junk = [("[\\]()`´':;,!|?=\/\"~*\\[]", ""),
+junk = [(u"[\\]()`´':;,!|?=\/\"~*\\[«»]", ""),
         ("[-_.\\\\ ]+", "_"),
         ("&+", "_and_"),
         ("@", "_at_"),
@@ -221,6 +221,11 @@ def rename_files(tags):
     for tag in tags:
         rename_file(tag, len(tags) > 9)
 
+def ensure_unicode(x):
+    if isinstance(x, str):
+        x = unicode(x, 'utf-8', 'ignore')
+    return x
+
 def rename_file(tag, zero=True):
     if not tag.title:
         return
@@ -233,10 +238,10 @@ def rename_file(tag, zero=True):
         track += '_'
     else:
         track = ''
-        print "WARNING: no track number on file " + tag.file
+        print "WARNING: no track number in " + tag.file
 
-    new_name = unicode(os.path.dirname(tag.file), 'utf-8', 'ignore') + '/'
-    new_name += remove_junk(track + tag.title)
+    new_name = ensure_unicode(os.path.dirname(tag.file)) + '/'
+    new_name += remove_junk(track + ensure_unicode(tag.title))
     new_name += os.path.splitext(tag.file)[1]
 
     if new_name == tag.file:
@@ -415,12 +420,17 @@ def old_parse_mb_release(release):
 
     return result
 
+def decode_utf8(x):
+    if isinstance(x, str):
+        x = x.decode('utf-8')
+    return x
+    
 def guess_mb_release(tag_list):
     artist = get_tags_artist(tag_list)
     album = get_tags_album(tag_list)
 
     filter = ws.ReleaseFilter(query='%s and tracks:%d and artist:"%s"' \
-                                  % (album, len(tag_list), artist),
+                                  % (decode_utf8(album), len(tag_list), decode_utf8(artist)),
                               limit=7)
 
     releases = search_mb(filter, len(tag_list))
@@ -428,6 +438,7 @@ def guess_mb_release(tag_list):
 
     if res_len == 0:
         print "No releases found"
+        return False
     else:
         print "Data from tags:", artist, '-', album, "[" + str(len(tag_list)), "tracks]\n"
         print "Variants from MusicBrainz:"
@@ -447,7 +458,7 @@ def guess_mb_release(tag_list):
                 break
             elif int(a) <= res_len and int(a) > -1:
                 a = int(a)
-                if a == 0: return
+                if a == 0: return False
 
                 mb_data = old_parse_mb_release(releases[a - 1].tracks)
                 break
@@ -456,7 +467,7 @@ def guess_mb_release(tag_list):
 
         for tag in tag_list:
             set_mb_data(tag, mb_data)
-
+        return True
 
 def find_track(tracks, number):
     for track in tracks:

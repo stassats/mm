@@ -7,9 +7,15 @@ import re
 import readline
 import pipes
 import shutil
+import codecs
+from optparse import OptionParser
 
 import cue
 import tag
+import tempfile
+
+use_musicbrainz = True
+cue_encoding = 'utf-8'
 
 ## Readline and completion
 
@@ -40,7 +46,7 @@ readline.set_completer(filename_completer)
 
 def read_line(prompt, initial_text):
     def startup_hook():
-        readline.insert_text(initial_text)
+        readline.insert_text(initial_text.encode('UTF-8'))
 
     readline.set_startup_hook(startup_hook)
     try:
@@ -111,7 +117,7 @@ def parse_year(year):
 
 def guess_from_cue(cue_file):
     try:
-        album = cue.parse_cue(cue_file)
+        album = cue.parse_cue(cue_file, cue_encoding)
     except Exception as e:
         print e
         return
@@ -194,6 +200,7 @@ def make_filename(tags):
         return music_dir
 
     artist = remove_article(tag.remove_junk(artist))
+
     album = tag.remove_junk(album)
 
     if artist == 'various_artists':
@@ -229,7 +236,14 @@ def shntool(destination, files, cue=None):
     encoder = "'cust ext=ogg oggenc -q8 -o %s/%%f -'" % destination
 
     if cue:
-        mode = "split -t %n_%t -f " + pipes.quote(os.path.basename(cue))
+        if cue_encoding != 'utf-8':
+            temp = tempfile.NamedTemporaryFile()
+            with codecs.open(cue, encoding=cue_encoding) as input:
+                with codecs.open(temp.name, 'w', encoding='utf-8') as output:
+                    output.write(input.read())
+            cue = temp.name
+
+        mode = "split -t %n_%t -f " + pipes.quote(os.path.abspath(cue))
     else:
         mode = "conv"
 
@@ -238,7 +252,6 @@ def shntool(destination, files, cue=None):
                 ,dir)
 
 def set_tags(directory, tags, remove=None):
-
     def track_number(file_name, common=""):
         match = re.match(re.escape(common) + '(\d\d?)',
                          tag.remove_junk(os.path.basename(file_name)))
@@ -275,7 +288,9 @@ def set_tags(directory, tags, remove=None):
         for i in tags:
             i.set_year()
 
-    tag.guess_mb_release(tags)
+    if use_musicbrainz:
+        tag.guess_mb_release(tags)
+
     tag.rename_files(tags)
     map(tag.Tag.write_tag, tags)
 
@@ -287,7 +302,7 @@ def copy_mp3(files, destination):
         new_name = tag.unjunk_filename(os.path.basename(file))
         shutil.copy(file, os.path.join(destination, new_name))
 
-def recode_release(release):
+def recode_release(release, dest):
     cues, files = release
 
     if cues and len(files) == 1:
@@ -300,8 +315,8 @@ def recode_release(release):
             guess = guess_from_tags(files)
         cues = None
 
-    if len(sys.argv) == 2:
-        destination = sys.argv[1]
+    if dest:
+        destination = dest
     else:
         destination = read_line("Destination: ", make_filename(guess))
 
@@ -320,8 +335,34 @@ def recode_release(release):
 
     os.system("mpc update " + destination.replace(music_dir, "", 1))
 
-def recode(directory):
+def recode(directory, dest):
     releases = get_dirs(directory)
-    map(recode_release, releases)
+    for release in releases:
+        recode_release(release, dest)
 
-recode(".")
+def parse_opt():
+    usage = "%prog [options] [files]"
+    parser = OptionParser(usage=usage)
+
+    parser.add_option("-n", "--no-musicbrainz", dest="no_mb", action="store_true",
+                      default=False,
+                      help="Disable musicbrainz access")
+    parser.add_option("-c", "--cue-encoding", dest="cue_encoding", action="store",
+                      default="utf-8",
+                      help="Specify CUE file encoding")
+
+    return parser.parse_args()
+
+def main ():
+    global use_musicbrainz
+    global cue_encoding
+
+    options, args = parse_opt()
+    destination = args[0] if len(args) else False
+    if options.no_mb:
+        use_musicbrainz = False
+    cue_encoding = options.cue_encoding
+
+    recode(".", destination)
+
+main()
