@@ -72,7 +72,7 @@ class Tag:
             audio['artist'] = ensure_unicode(self.artist).replace(u'‐', '-')
 
         if self.title:
-            audio['title'] = ensure_unicode(self.title).replace(u'‐', '-').replace('`', "'")
+            audio['title'] = ensure_unicode(self.title).replace(u'‐', '-').replace('`', "'").replace(u'’', u"'")
 
         if self.album or self.album == "":
             audio['album'] = ensure_unicode(self.album).replace(u'‐', '-')

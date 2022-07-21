@@ -18,18 +18,22 @@
 (define *format-number* #f)
 
 (define (main args)
-  (let ((args (options (cdr args))))
+  (let ((args (options (cdr args)))
+        (list ()))
     (walk-directories
      (lambda (old)
-       (let ((new (process-file old)))
-         (cond ((equal? old (simplify-path new)))
-               (*test* (display (format "Old: ~A, new: ~A.~%" old new)))
-               (else
-                (if (file-exists? new)
-                    (warn (format "File ~a exists." new))
-                    (move-file old new))))))
+       (push! list old))
      args
-     *depth*)))
+     *depth*)
+    (map (lambda (old)
+           (let ((new (process-file old)))
+             (cond ((equal? old (simplify-path new)))
+                   (*test* (display (format "Old: ~A, new: ~A.~%" old new)))
+                   (else
+                    (if (file-exists? new)
+                        (warn (format "File ~a exists." new))
+                        (move-file old new))))))
+         list)))
 
 (define (process-string string)
   (define (replace what with)
@@ -73,28 +77,26 @@
 
 (define (change-number string start amount)
   "Change number from <start> by <amount>: 10_file -> 11_file"
-  (rxmatch-let (rxmatch #/^(\d+)(\D.+)?$/ string)
+  (rxmatch-if (rxmatch #/^(\d+)(.*)?$/ string)
                (#f snum rest)
-    (if snum
-        (let ((num (string->number snum)))
-          (if (>= num start)
-              (let* ((str (number->string (+ amount num)))
-                     (dif (- (string-length snum) ;; Number of padded zeros
-                             (string-length str))))
-                (string-append
-                 (make-string (max dif 0) #\0)
-                 str (or rest "")))
-              #f))
-        #f)))
+               (let ((num (string->number snum)))
+                 (if (>= num start)
+                     (let* ((str (number->string (+ amount num)))
+                            (dif (- (string-length snum) ;; Number of padded zeros
+                                    (string-length str))))
+                       (string-append
+                        (make-string (max dif 0) #\0)
+                        str (or rest "")))
+                     #f))
+               #f))
 
 (define (format-number string)
-  (rxmatch-let (rxmatch #/^(\d+)$/ string)
-               (#f snum)
-    (if snum
-        (if (< (string->number snum) 10)
-            (string-append "0" string)
-            #f)
-        #f)))
+  (rxmatch-if (rxmatch #/^(\d+)$/ string)
+              (#f snum)
+              (if (< (string->number snum) 10)
+                  (string-append "0" string)
+                  #f)
+              #f))
 
 (define (walk-directories proc files depth)
   (when (or (not depth) (>= depth 0))
@@ -110,7 +112,7 @@
      files)))
 
 (define (help)
-  (print "delete=s with=s reverse start=n amount=n max-depth=n test")
+  (print "delete=s with=s reverse start=n amount=n max-depth=n test format-number")
   (exit))
 
 (define (options args)
