@@ -62,7 +62,7 @@ def t_newline(t):
     t.lexer.lineno += len(t.value)
 
 def t_error(t):
-    print "Illegal character '%s'" % t.value[0]
+    print("Illegal character '%s'" % t.value[0])
     t.lexer.skip(1)
 
 # Yacc
@@ -125,7 +125,7 @@ def p_track(p):
 
 
 def p_error(p):
-    print "Syntax error in:", p
+    print("Syntax error in:", p)
 
 class Album:
     performer = None

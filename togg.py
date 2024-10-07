@@ -5,7 +5,7 @@ import sys
 import os
 import re
 import readline
-import pipes
+import shlex
 import shutil
 import codecs
 from optparse import OptionParser
@@ -14,7 +14,7 @@ import cue
 import tag
 import tempfile
 
-use_musicbrainz = True
+use_musicbrainz = False
 cue_encoding = 'utf-8'
 
 ## Readline and completion
@@ -45,12 +45,10 @@ readline.parse_and_bind("tab: complete")
 readline.set_completer(filename_completer)
 
 def read_line(prompt, initial_text):
-    def startup_hook():
-        readline.insert_text(initial_text.encode('UTF-8'))
+    readline.set_startup_hook(lambda: readline.insert_text(initial_text))
 
-    readline.set_startup_hook(startup_hook)
     try:
-        return raw_input(prompt)
+        return input(prompt)
     finally:
         readline.set_startup_hook(None)
 
@@ -94,8 +92,8 @@ def group_multiple_cues(cues, non_cues):
     return groups
 
 def group_files(files):
-    cues = filter(lambda file: extension(file) == ".cue", files)
-    non_cues = filter(lambda file: extension(file) != ".cue", files)
+    cues = [file for file in files if extension(file) == ".cue"]
+    non_cues = [file for file in files if extension(file) != ".cue"]
 
     if len(cues) == len(non_cues) and len(cues) > 1:
         return group_multiple_cues(cues, non_cues)
@@ -110,8 +108,8 @@ def is_various_artists(cue_album):
     return False
 
 def parse_year(year):
-    if isinstance(year, basestring):
-        match = re.search("\d{4}", year)
+    if isinstance(year, str):
+        match = re.search(r"\d{4}", year)
         if match:
             return match.group()
 
@@ -119,7 +117,7 @@ def guess_from_cue(cue_file):
     try:
         album = cue.parse_cue(cue_file, cue_encoding)
     except Exception as e:
-        print e
+        print(e)
         return
         
     if not album:
@@ -220,7 +218,7 @@ def make_filename(tags):
 
 def remove_directory(files):
     return (os.path.dirname(files[0]),
-            map(os.path.basename, files))
+            list(map(os.path.basename, files)))
 
 def run_program(command, directory):
     original_cwd = os.getcwd()
@@ -243,17 +241,17 @@ def shntool(destination, files, cue=None):
                     output.write(input.read())
             cue = temp.name
 
-        mode = "split -t %n_%t -f " + pipes.quote(os.path.abspath(cue))
+        mode = "split -t %n_%t -f " + shlex.quote(os.path.abspath(cue))
     else:
         mode = "conv"
 
     run_program("shntool " + mode + " -o " + encoder +
-                " -O always " + str.join(' ', map(pipes.quote, files))
+                " -O always " + str.join(' ', list(map(shlex.quote, files)))
                 ,dir)
 
 def set_tags(directory, tags, remove=None):
     def track_number(file_name, common=""):
-        match = re.match(re.escape(common) + '(\d\d?)',
+        match = re.match(re.escape(common) + r'(\d\d?)',
                          tag.remove_junk(os.path.basename(file_name)))
         if match:
             return int(match.group(1))
@@ -265,14 +263,14 @@ def set_tags(directory, tags, remove=None):
         return
 
     common = os.path.basename(os.path.commonprefix
-                              (map(tag.unjunk_filename, file_list)))
+                              (list(map(tag.unjunk_filename, file_list))))
 
     for file in file_list:
         new_tag = tag.find_track(tags, track_number(file, common))
 
         if not new_tag:
-            print "WARNING: couldn't find track with number " + \
-                str(track_number(file, common))
+            print("WARNING: couldn't find track with number " + \
+                str(track_number(file, common)))
         else:
             new_tag.file = file
 
@@ -292,7 +290,7 @@ def set_tags(directory, tags, remove=None):
         tag.guess_mb_release(tags)
 
     tag.rename_files(tags)
-    map(tag.Tag.write_tag, tags)
+    list(map(tag.Tag.write_tag, tags))
 
 def copy_mp3(files, destination):
     if not os.path.exists(destination):

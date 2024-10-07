@@ -11,9 +11,8 @@ import sys
 import time
 import re
 import string
-import exceptions
 
-import musicbrainz2.webservice as ws
+#import musicbrainz2.webservice as ws
 import musicbrainzngs as m
 from optparse import OptionParser
 
@@ -28,7 +27,7 @@ from mutagen.apev2 import APEv2
 
 ####
 
-q = ws.Query()
+#q = ws.Query()
 m.set_useragent("Example music app", "0.1", "http://example.com/music")
 
 class Tag:
@@ -47,19 +46,19 @@ class Tag:
         self.file = file
         audio = open_file(file)
 
-        if audio.has_key('artist'):
+        if 'artist' in audio:
             self.artist = audio['artist'][0]
 
-        if audio.has_key('title'):
+        if 'title' in audio:
             self.title = audio['title'][0]
 
-        if audio.has_key('album'):
+        if 'album' in audio:
             self.album = audio['album'][0]
 
-        if audio.has_key('date'):
+        if 'date' in audio:
             self.year = audio['date'][0]
 
-        if audio.has_key('tracknumber'):
+        if 'tracknumber' in audio:
             self.number = int(audio['tracknumber'][0].partition('/')[0])
 
         audio.save()
@@ -69,13 +68,13 @@ class Tag:
         audio = open_file(self.file)
 
         if self.artist:
-            audio['artist'] = ensure_unicode(self.artist).replace(u'‐', '-')
+            audio['artist'] = ensure_unicode(self.artist).replace('‐', '-')
 
         if self.title:
-            audio['title'] = ensure_unicode(self.title).replace(u'‐', '-').replace('`', "'").replace(u'’', u"'")
+            audio['title'] = ensure_unicode(self.title).replace('‐', '-').replace('`', "'").replace('’', "'")
 
         if self.album or self.album == "":
-            audio['album'] = ensure_unicode(self.album).replace(u'‐', '-')
+            audio['album'] = ensure_unicode(self.album).replace('‐', '-')
 
         if self.year:
             audio['date'] = str(self.year)
@@ -95,15 +94,15 @@ class Tag:
         self.album = lower_articles(self.album)
 
     def set_title(self):
-        title = unicode(os.path.splitext(os.path.basename(self.file))[0],
+        title = str(os.path.splitext(os.path.basename(self.file))[0],
                         'utf-8', 'ignore')
         title = title.replace('_', ' ')
 
-        self.title = re.search('^(?:\d\d? )?(.+)', title).group(1)
+        self.title = re.search(r'^(?:\d\d? )?(.+)', title).group(1)
 
     def set_number(self):
         title = os.path.basename(self.file)
-        track = re.search('^\d\d?', title)
+        track = re.search(r'^\d\d?', title)
 
         if track:
             self.number = int(track.group())
@@ -113,43 +112,43 @@ class Tag:
 
         album = album.replace('_', ' ')
 
-        album = re.search('^(\d\d\w? )?(.+?)( \d{4})?$', album)
+        album = re.search(r'^(\d\d\w? )?(.+?)( \d{4})?$', album)
 
         self.album = album.group(2)
 
     def set_year(self):
         year = os.path.basename(os.path.dirname(self.file))
 
-        year = re.search('\d{4}$', year)
+        year = re.search(r'\d{4}$', year)
 
         if year:
             self.year = year.group()
 
     def display_tag(self):
-        print "Artist:", self.artist
-        print "Title:", self.title
-        print "Album:", self.album
-        print "Year:", self.year
-        print "Tracknumber:", str(self.number)
+        print("Artist:", self.artist)
+        print("Title:", self.title)
+        print("Album:", self.album)
+        print("Year:", self.year)
+        print("Tracknumber:", str(self.number))
 
-class not_media_file(exceptions.Exception):
+class not_media_file(Exception):
     def __init__(self):
         pass
 
-class not_album(exceptions.Exception):
+class not_album(Exception):
     def __init__(self):
         pass
 
 ########
 
-junk = [(u"[\\]()`´':;,!|?=\/\"~*\\[«»]", ""),
-        ("[-_.\\\\ ]+", "_"),
-        ("&+", "_and_"),
-        ("@", "_at_"),
-        ("#", "_n"),
-        ("_+", "_"),
-        ("_$", ""),
-        ("^_", "")]
+junk = [(r"[\]\(\)`´':;,!|?=\/\"~*\\[«»]", ""),
+        (r"[-_.\\\\ ]+", "_"),
+        (r"&+", "_and_"),
+        (r"@", "_at_"),
+        (r"#", "_n"),
+        (r"_+", "_"),
+        (r"_$", ""),
+        (r"^_", "")]
 
 junk_re = [(re.compile(rx), sub) for (rx, sub) in junk]
 
@@ -199,7 +198,7 @@ def lower_articles(str):
     if not words:
         return str
 
-    articled_words = [words[0]] + map(articlify, words[1:-1])
+    articled_words = [words[0]] + list(map(articlify, words[1:-1]))
     if len(words) > 1:
         articled_words += [words[-1]]
     return string.join(articled_words, ' ')
@@ -210,7 +209,7 @@ def capitalize(str):
 
     words = [word.capitalize() for word in str.split()]
 
-    words = map(cap, words)
+    words = list(map(cap, words))
 
     return lower_articles(string.join(words, ' '))
 
@@ -222,8 +221,6 @@ def rename_files(tags):
         rename_file(tag, len(tags) > 9)
 
 def ensure_unicode(x):
-    if isinstance(x, str):
-        x = unicode(x, 'utf-8', 'ignore')
     return x
 
 def rename_file(tag, zero=True):
@@ -238,7 +235,7 @@ def rename_file(tag, zero=True):
         track += '_'
     else:
         track = ''
-        print "WARNING: no track number in " + tag.file
+        print("WARNING: no track number in " + tag.file)
 
     new_name = ensure_unicode(os.path.dirname(tag.file)) + '/'
     new_name += remove_junk(track + ensure_unicode(tag.title))
@@ -248,7 +245,7 @@ def rename_file(tag, zero=True):
         return
 
     if os.path.exists(new_name):
-        print 'WARNING: path', new_name, 'exists'
+        print('WARNING: path', new_name, 'exists')
         return
 
     os.rename (tag.file, new_name)
@@ -300,7 +297,7 @@ def read_tags(file_list):
         try:
             tag_list.append(Tag(file))
         except not_media_file:
-            print file, "is not a media file!"
+            print(file, "is not a media file!")
             continue
 
     return tag_list
@@ -321,23 +318,26 @@ def get_tags_artist(tag_list):
     return artist
 
 def get_mb_data(id):
-    id, disc_id = re.search('^(?:http://.+/)?(.+?)(?:#disc(\d+))?$', id).groups()
+    id, disc_id = re.search(r'^(?:https://.+/)?(.+?)(?:#disc(\d+))?$', id).groups()
 
     try:
         release = m.get_release_by_id(id, ['artists','recordings','artist-credits'])['release']
-    except m.MusicBrainzError, exceptions.e:
-        print 'Error:', exceptions.e
+
+    except m.MusicBrainzError as xxx_todo_changeme:
+        exceptions.e = xxx_todo_changeme
+        print('Error:', exceptions.e)
         sys.exit(1)
 
     return parse_mb_release(release, disc_id)
 
 def set_mb_data(tag, mb_data):
     track_number = tag.number
+    print(len(mb_data))
     if track_number < len(mb_data):
         tag.album = mb_data[0]
         tag.artist, tag.title = mb_data[tag.number]
     else:
-        print 'WARNING: there is no track', track_number, 'in this MusicBrainz release'
+        print('WARNING: there is no track', track_number, 'in this MusicBrainz release')
 
 def mb_get_artist(release):
     for x in release['artist-credit']:
@@ -364,45 +364,45 @@ def parse_mb_release(release, disc_id=None):
 
     return result
 
-def mb_request(name, *args, **kwargs):
-    while True:
-        try:
-            # MB doesn't like more than one request per second
-            time.sleep(1)
-            return name(*args, **kwargs)
-        except ws.WebServiceError as exception:
-            if exception.msg and exception.msg.find("503"):
-                print "WARNING: 503"
-                time.sleep(1)
-            else:
-                raise(exception)
+# def mb_request(name, *args, **kwargs):
+#     while True:
+#         try:
+#             # MB doesn't like more than one request per second
+#             time.sleep(1)
+#             return name(*args, **kwargs)
+#         except ws.WebServiceError as exception:
+#             if exception.msg and exception.msg.find("503"):
+#                 print("WARNING: 503")
+#                 time.sleep(1)
+#             else:
+#                 raise(exception)
 
-class SearchResult:
-    id = None
-    artist = None
-    title = None
-    score = 0
+# class SearchResult:
+#     id = None
+#     artist = None
+#     title = None
+#     score = 0
 
-    def set_from_mb(self, mb_release):
-        release = mb_release.release
-        self.id = release.id
-        self.score = mb_release.score
-        self.artist = release.artist.name
-        self.title = release.title
-        self.tracks = mb_request(q.getReleaseById,
-                                 release.id,
-                                 ws.ReleaseIncludes(tracks=True, artist=True))
-        return self
+#     def set_from_mb(self, mb_release):
+#         release = mb_release.release
+#         self.id = release.id
+#         self.score = mb_release.score
+#         self.artist = release.artist.name
+#         self.title = release.title
+#         self.tracks = mb_request(q.getReleaseById,
+#                                  release.id,
+#                                  ws.ReleaseIncludes(tracks=True, artist=True))
+#         return self
 
-def search_mb(query, tracks_count):
-    results = []
-    includes = ws.ReleaseIncludes(tracks=True, artist=True)
+# def search_mb(query, tracks_count):
+#     results = []
+#     includes = ws.ReleaseIncludes(tracks=True, artist=True)
 
-    for result in mb_request(q.getReleases, query):
-        if result.release.tracksCount == tracks_count:
-            results.append(SearchResult().set_from_mb(result))
+#     for result in mb_request(q.getReleases, query):
+#         if result.release.tracksCount == tracks_count:
+#             results.append(SearchResult().set_from_mb(result))
 
-    return results
+#     return results
 
 def old_parse_mb_release(release):
     result = [release.title]
@@ -421,8 +421,6 @@ def old_parse_mb_release(release):
     return result
 
 def decode_utf8(x):
-    if isinstance(x, str):
-        x = x.decode('utf-8')
     return x
     
 def guess_mb_release(tag_list):
@@ -437,22 +435,22 @@ def guess_mb_release(tag_list):
     res_len = len(releases)
 
     if res_len == 0:
-        print "No releases found"
+        print("No releases found")
         return False
     else:
-        print "Data from tags:", artist, '-', album, "[" + str(len(tag_list)), "tracks]\n"
-        print "Variants from MusicBrainz:"
+        print("Data from tags:", artist, '-', album, "[" + str(len(tag_list)), "tracks]\n")
+        print("Variants from MusicBrainz:")
 
         for i in range(res_len):
 
-            print str(i + 1) + ")", releases[i].artist, '-', \
+            print(str(i + 1) + ")", releases[i].artist, '-', \
                 releases[i].title, \
-                "(" + str(releases[i].score), "%)"
+                "(" + str(releases[i].score), "%)")
 
-            print " Details:", releases[i].id + ".html\n"
+            print(" Details:", releases[i].id + ".html\n")
 
         while True:
-            a = raw_input("Number of the release or a release id (zero for none): ")
+            a = input("Number of the release or a release id (zero for none): ")
             if not a.isdigit():
                 mb_data = get_mb_data(a)
                 break
@@ -463,7 +461,7 @@ def guess_mb_release(tag_list):
                 mb_data = old_parse_mb_release(releases[a - 1].tracks)
                 break
             else:
-                print "Must be a positive number less than %d" % res_len
+                print("Must be a positive number less than %d" % res_len)
 
         for tag in tag_list:
             set_mb_data(tag, mb_data)
@@ -477,7 +475,7 @@ def find_track(tracks, number):
 def set_from_cue(tag, cue_data):
     track = find_track(cue_data.tracks, tag.number)
     if not track:
-        print "error, no track with such number in a cue file", str(tag.number)
+        print("error, no track with such number in a cue file", str(tag.number))
 
     tag.album = cue_data.title
     tag.title = track.title
@@ -594,11 +592,11 @@ def main():
 
     if options.tracklist:
         for tag in tag_list:
-            print str(tag.number) + ".", tag.title
+            print(str(tag.number) + ".", tag.title)
         exit()
 
     if (len(sys.argv) - len(args) == 1):
-        map(Tag.display_tag, tag_list)
+        list(map(Tag.display_tag, tag_list))
         exit()
 
     if options.mb_id:
@@ -633,16 +631,16 @@ def main():
         if options.set_album:
             tag.set_album()
         elif options.Album:
-            tag.album = unicode(options.Album, 'utf-8')
+            tag.album =options.Album
 
         if options.Title:
-            tag.title = unicode(options.Title, 'utf-8')
+            tag.title = options.Title
 
         if options.Artist:
-            tag.artist = unicode(options.Artist, 'utf-8')
+            tag.artist = options.Artist
 
         if options.Year:
-            tag.year = unicode(options.Year, 'utf-8')
+            tag.year = options.Year
 
         if options.Number:
             tag.number = int(options.Number)
