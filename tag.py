@@ -19,9 +19,10 @@ from optparse import OptionParser
 from mutagen.flac import FLAC
 from mutagen.oggvorbis import OggVorbis
 from mutagen.easyid3 import EasyID3
+from mutagen.easyid3 import EasyID3
 import mutagen.id3
 from mutagen.musepack import Musepack
-from mutagen.mp4 import MP4
+from mutagen.easymp4 import EasyMP4 as MP4
 from mutagen.wavpack import WavPack
 from mutagen.apev2 import APEv2
 
@@ -94,8 +95,7 @@ class Tag:
         self.album = lower_articles(self.album)
 
     def set_title(self):
-        title = str(os.path.splitext(os.path.basename(self.file))[0],
-                        'utf-8', 'ignore')
+        title = os.path.splitext(os.path.basename(self.file))[0]
         title = title.replace('_', ' ')
 
         self.title = re.search(r'^(?:\d\d? )?(.+)', title).group(1)
@@ -201,7 +201,7 @@ def lower_articles(str):
     articled_words = [words[0]] + list(map(articlify, words[1:-1]))
     if len(words) > 1:
         articled_words += [words[-1]]
-    return string.join(articled_words, ' ')
+    return ' '.join(articled_words)
 
 def capitalize(str):
     if not str:
@@ -211,7 +211,7 @@ def capitalize(str):
 
     words = list(map(cap, words))
 
-    return lower_articles(string.join(words, ' '))
+    return lower_articles(' '.join(words))
 
 def get_file_ext(file):
     return os.path.splitext(file)[1][1:]
